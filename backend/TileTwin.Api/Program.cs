@@ -1,6 +1,8 @@
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using TileTwin.Api.Configuration;
@@ -59,6 +61,19 @@ app.UseSwaggerUI(o =>
     o.SwaggerEndpoint("/openapi/v1.json", "TileTwin API");
     o.RoutePrefix = "swagger";
 });
+
+// 3D asset manifest + optional GLB files from the repo's 3d-assets folder.
+if (EnvFile.FindUpward("3d-assets", directory: true) is { } assetsDir)
+{
+    var types = new FileExtensionContentTypeProvider();
+    types.Mappings[".glb"] = "model/gltf-binary";
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(assetsDir),
+        RequestPath = "/assets3d",
+        ContentTypeProvider = types,
+    });
+}
 
 app.UseAuthentication();
 app.UseAuthorization();

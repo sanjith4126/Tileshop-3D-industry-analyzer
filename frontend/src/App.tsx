@@ -1,27 +1,29 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense } from 'react'
+import { Route, Routes } from 'react-router'
+import { Layout } from './components/Layout'
+import { Loading } from './components/States'
+import OverviewPage from './pages/OverviewPage'
+import PlaceholderPage from './pages/PlaceholderPage'
 
-type Health = 'checking' | 'ok' | 'unavailable'
+// three.js is large: load the twin only when visited.
+const TwinPage = lazy(() => import('./twin/TwinPage'))
 
 export default function App() {
-  const [health, setHealth] = useState<Health>('checking')
-
-  useEffect(() => {
-    fetch('/api/health')
-      .then((r) => setHealth(r.ok ? 'ok' : 'unavailable'))
-      .catch(() => setHealth('unavailable'))
-  }, [])
-
   return (
-    <div className="min-h-screen">
-      <div role="status" className="bg-amber-500 px-4 py-1 text-center text-sm font-semibold text-slate-950">
-        DEMONSTRATION FACILITY — SYNTHETIC DATA
-      </div>
-      <main className="p-6">
-        <h1 className="text-2xl font-semibold">TileTwin Demonstration Facility</h1>
-        <p className="mt-2 text-slate-400">
-          Backend API: <span data-testid="api-health">{health}</span>
-        </p>
-      </main>
-    </div>
+    <Routes>
+      <Route element={<Layout />}>
+        <Route index element={<OverviewPage />} />
+        <Route path="twin" element={<Suspense fallback={<Loading label="Loading 3D twin…" />}><TwinPage /></Suspense>} />
+        <Route path="inspection/*" element={<PlaceholderPage title="Remote Site Inspection" milestone={5} />} />
+        <Route path="monitoring/*" element={<PlaceholderPage title="Machine Monitoring" milestone={4} />} />
+        <Route path="tile-quality" element={<PlaceholderPage title="Tile Quality Inspection" milestone={9} />} />
+        <Route path="predictive" element={<PlaceholderPage title="Predictive Maintenance" milestone={6} />} />
+        <Route path="assistant" element={<PlaceholderPage title="AI Assistant" milestone={8} />} />
+        <Route path="knowledge" element={<PlaceholderPage title="Knowledge Centre" milestone={10} />} />
+        <Route path="reports" element={<PlaceholderPage title="Reports" milestone={7} />} />
+        <Route path="admin" element={<PlaceholderPage title="Administration" milestone={11} />} />
+        <Route path="*" element={<PlaceholderPage title="Page not found" />} />
+      </Route>
+    </Routes>
   )
 }

@@ -1,1 +1,37 @@
-{ "version": 1, "entities": {} }
+{
+  "version": 1,
+  "notes": "Illustrative layout of the fictional TileTwin Demonstration Facility. Units are metres but dimensions are NOT real equipment specs. Zone scale = [width, 1, depth]. Conveyor scale[0] = belt length. Set modelPath (relative to this folder) to load a GLB instead of procedural geometry.",
+  "building": { "size": [80, 9, 30] },
+  "entities": {
+    "ZONE-RAW-A":   { "type": "Zone", "position": [-32, 0, 0], "rotation": [0, 0, 0], "scale": [16, 1, 28] },
+    "ZONE-PRESS-A": { "type": "Zone", "position": [-15, 0, 0], "rotation": [0, 0, 0], "scale": [18, 1, 28] },
+    "ZONE-KILN-A":  { "type": "Zone", "position": [4, 0, 0],   "rotation": [0, 0, 0], "scale": [20, 1, 28] },
+    "ZONE-GLAZE-A": { "type": "Zone", "position": [22, 0, 0],  "rotation": [0, 0, 0], "scale": [16, 1, 28] },
+    "ZONE-MAINT-A": { "type": "Zone", "position": [35, 0, 0],  "rotation": [0, 0, 0], "scale": [10, 1, 28] },
+
+    "MACHINE-MOTOR-001": { "type": "Motor", "position": [-35, 0, -6], "rotation": [0, 0, 0], "scale": [1.4, 1.4, 1.4] },
+    "MACHINE-PUMP-001":  { "type": "Pump", "position": [-30, 0, 3], "rotation": [0, 0, 0], "scale": [1, 1, 1] },
+    "MACHINE-CONV-001":  { "type": "Conveyor", "position": [-24.5, 0, 8], "rotation": [0, 0, 0], "scale": [7, 1, 1] },
+
+    "MACHINE-HP-001": { "type": "HydraulicPress", "position": [-21, 0, -5], "rotation": [0, 0, 0], "scale": [1, 1, 1] },
+    "MACHINE-HP-002": { "type": "HydraulicPress", "position": [-17, 0, -5], "rotation": [0, 0, 0], "scale": [1, 1, 1] },
+    "MACHINE-HP-003": { "type": "HydraulicPress", "position": [-13, 0, -5], "rotation": [0, 0, 0], "scale": [1, 1, 1] },
+    "MACHINE-HP-004": { "type": "HydraulicPress", "position": [-9, 0, -5],  "rotation": [0, 0, 0], "scale": [1, 1, 1] },
+    "MACHINE-PUMP-002": { "type": "Pump", "position": [-15, 0, 3], "rotation": [0, 1.5708, 0], "scale": [1.2, 1.2, 1.2] },
+    "MACHINE-CONV-002": { "type": "Conveyor", "position": [-6, 0, 8], "rotation": [0, 0, 0], "scale": [8, 1, 1] },
+
+    "SCENERY-KILN": { "type": "Kiln", "position": [4, 0, 0], "rotation": [0, 0, 0], "scale": [16, 2.5, 3] },
+    "MACHINE-MOTOR-002": { "type": "Motor", "position": [0, 0, -7], "rotation": [0, 0, 0], "scale": [1.2, 1.2, 1.2] },
+    "MACHINE-MOTOR-003": { "type": "Motor", "position": [8, 0, 4],  "rotation": [0, 1.5708, 0], "scale": [1, 1, 1] },
+    "MACHINE-CONV-003":  { "type": "Conveyor", "position": [13.5, 0, 8], "rotation": [0, 0, 0], "scale": [7, 1, 1] },
+
+    "MACHINE-PUMP-003": { "type": "Pump", "position": [18, 0, -7], "rotation": [0, 0, 0], "scale": [1, 1, 1] },
+    "MACHINE-INSP-001": { "type": "InspectionStation", "position": [20, 0, 2], "rotation": [0, 0, 0], "scale": [1, 1, 1] },
+    "MACHINE-INSP-002": { "type": "InspectionStation", "position": [25, 0, 2], "rotation": [0, 0, 0], "scale": [1, 1, 1] },
+    "MACHINE-CONV-004": { "type": "Conveyor", "position": [24, 0, 8], "rotation": [0, 0, 0], "scale": [8, 1, 1] },
+
+    "SCENERY-RACKS-1": { "type": "RackRow", "position": [35, 0, -9], "rotation": [0, 0, 0], "scale": [1, 1, 1] },
+    "SCENERY-RACKS-2": { "type": "RackRow", "position": [35, 0, -3], "rotation": [0, 0, 0], "scale": [1, 1, 1] },
+    "SCENERY-RACKS-3": { "type": "RackRow", "position": [35, 0, 3],  "rotation": [0, 0, 0], "scale": [1, 1, 1] }
+  }
+}

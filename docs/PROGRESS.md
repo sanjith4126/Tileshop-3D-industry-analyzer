@@ -2,7 +2,7 @@
 
 ## Current state
 
-**Milestones 1–2 DONE (2026-10-22).** Next: Milestone 3 (frontend shell + 3D twin).
+**Milestones 1–3 DONE (2026-10-22).** Next: Milestone 4 (simulator, charts, alerts).
 
 ## Environment (2026-10-22, Windows 11)
 
@@ -21,7 +21,7 @@ Ports: Postgres 5434, API 5080, ML 8001, frontend 5180 (5173 is taken by another
 | Suite | Command | Result |
 |---|---|---|
 | Backend (xUnit, real Postgres `tiletwin_test`) | `dotnet test backend/TileTwin.slnx` | 23 passed, 0 failed (~51 s, mostly re-seeding 494k readings) |
-| Frontend (Vitest) | `npm test` | 2 passed (M1) |
+| Frontend (Vitest) | `npm test` | 5 passed; `npm run build` OK |
 | ML (pytest) | `pytest` | 1 passed (M1) |
 
 ## Milestone 1 — environment + skeleton ✅
@@ -65,6 +65,33 @@ health checks; `.env.example`; README.
 - No live simulator yet → machines become `Offline` 5 min after seeding (Milestone 4 fixes this).
 - Dev DB is seeded once; "Reset demo data" endpoint comes with Administration (Milestone 11).
 
+## Milestone 3 — frontend shell + 3D twin ✅
+
+- Dark control-room shell: SYNTHETIC DATA banner, 10-item navigation (React Router), TanStack Query
+  polling every 7 s, loading / error (with retry) / empty states. Unbuilt modules show an honest
+  "scheduled for Milestone N" page.
+- **Overview**: machine counts per status (icon + label + colour), machines needing attention with
+  reasons, "Show in 3D" and "Details", configuration status (API, DB, AI, knowledge search, dev users).
+- **3D Digital Twin** (React Three Fiber + drei, lazy-loaded): procedural low-poly building, 5 zone
+  floor regions with labels, presses, pumps, motors, conveyors, inspection stations, kiln, instanced
+  storage racks. Layout from `3d-assets/asset-manifest.json` (served by the API at `/assets3d`).
+  GLB `modelPath` support via `useGLTF` + Suspense with procedural fallback and a warning tag.
+- Status colour on floor ring + beacon, plus an HTML label with icon and ID (keyboard-focusable);
+  legend. Selecting a machine: cyan outline box, highlighted ring, animated camera fly-to, side panel
+  loaded from `GET /api/machines/{id}` (status + reasons, latest readings with limits, maintenance).
+- Controls: orbit/zoom/pan (CameraControls), reset camera, fit-to-factory, zone visibility toggles,
+  search (machine or zone). Shared store `focusEntity(id)` + deep link `/twin?focus=ID`.
+- Verified in Chrome: scene renders, label click opens the panel, deep link flies to MACHINE-HP-002.
+  Console: only a three.js `THREE.Clock` deprecation warning from the library.
+
+### Known limitations (M3)
+
+- 3D rendering is not covered by automated tests (WebGL isn't available in jsdom); covered by the
+  manual check above. Shell, overview and focus store are unit-tested.
+- Machine labels of adjacent presses overlap at the default zoom.
+- Status colours could only be checked as `Offline` in the browser, because the seeded data was
+  already stale; the live simulator (M4) makes Normal/Warning/Critical/Unknown visible.
+
 ## Next
 
-Milestone 3 — frontend shell, theme, navigation, procedural 3D factory wired to the API.
+Milestone 4 — live simulator, time-series charts with limit lines, threshold alerts + acknowledgement.
