@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="TileTwin.Api/TileTwin.Api.csproj" />
+  <Project Path="TileTwin.Domain/TileTwin.Domain.csproj" />
+  <Project Path="TileTwin.Infrastructure/TileTwin.Infrastructure.csproj" />
+  <Project Path="TileTwin.Tests/TileTwin.Tests.csproj" />
+</Solution>

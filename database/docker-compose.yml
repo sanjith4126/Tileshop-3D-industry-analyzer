@@ -1,0 +1,25 @@
+# Postgres only — app services run locally. Run from repo root:
+#   docker compose -f database/docker-compose.yml --env-file .env up -d
+name: tiletwin
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: tiletwin
+      POSTGRES_USER: tiletwin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    ports:
+      # 5434 on the host: 5432/5433 are often taken by a local Postgres install.
+      - "${POSTGRES_HOST_PORT:-5434}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tiletwin -d tiletwin"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  pgdata:
