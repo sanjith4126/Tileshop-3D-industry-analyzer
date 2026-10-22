@@ -2,40 +2,69 @@
 
 ## Current state
 
-**Milestone 1 — DONE (2026-10-22).** Next: Milestone 2.
+**Milestones 1–2 DONE (2026-10-22).** Next: Milestone 3 (frontend shell + 3D twin).
 
 ## Environment (2026-10-22, Windows 11)
 
 | Tool | Version | Notes |
 |---|---|---|
 | node / npm | 22.18.0 / 11.13.0 | |
-| dotnet | SDK 10.0.301 | projects target net10.0 |
-| python | 3.11.9 (`python`) | ml-service `.venv` uses it |
-| git | 2.56.0 | |
-| Docker Desktop | 4.96.1 (engine 29.9.2, compose v5.6.0) | `docker.exe` is in `C:\Program Files\Docker\Docker\resources\bin` (may need a new terminal to be on PATH) |
+| dotnet | SDK 10.0.301 | net10.0; `dotnet-ef` 10.0.13 as a *local* tool (`dotnet-tools.json`) |
+| python | 3.11.9 (`python`) | ml-service `.venv` |
+| Docker Desktop | 4.96.1 (engine 29.9.2, compose v5.6.0) | `C:\Program Files\Docker\Docker\resources\bin` |
 | Local PostgreSQL 17 / 18 | ports 5432 / 5433 | **not used** by this project |
 
-Port choices: Postgres 5434 (5432/5433 taken), API 5080, ML 8001, frontend 5180 (5173 taken by another local app).
+Ports: Postgres 5434, API 5080, ML 8001, frontend 5180 (5173 is taken by another local app).
 
-## Milestone 1 — what works (verified 2026-10-22)
+## Test results (last run 2026-10-22)
 
-- `database/` — `pgvector/pgvector:pg16` container healthy on host port 5434; PostgreSQL 16.15,
-  `vector` 0.8.7 enabled by `init/01-extensions.sql`; host connection with `.env` password verified.
-- `backend/` — TileTwin.slnx: Api / Domain / Infrastructure / Tests (net10.0).
-  `GET /api/health` → ok on <http://localhost:5080>; `/openapi/v1.json` → 200. `dotnet test` → 1 passed.
-- `frontend/` — React 19 + TS + Vite 8 + Tailwind 4; SYNTHETIC DATA banner; shows API health through
-  the `/api` proxy (verified at <http://localhost:5180/api/health>). `npm test` → 2 passed; `npm run build` OK.
-- `ml-service/` — FastAPI, `GET /health` → ok on <http://localhost:8001>. `pytest` → 1 passed
-  (1 Starlette deprecation warning about httpx in TestClient; harmless).
-- `.env.example`, local `.env` (random secrets, git-ignored), `.gitignore`, README, `3d-assets/asset-manifest.json` stub.
+| Suite | Command | Result |
+|---|---|---|
+| Backend (xUnit, real Postgres `tiletwin_test`) | `dotnet test backend/TileTwin.slnx` | 23 passed, 0 failed (~51 s, mostly re-seeding 494k readings) |
+| Frontend (Vitest) | `npm test` | 2 passed (M1) |
+| ML (pytest) | `pytest` | 1 passed (M1) |
 
-## Known limitations
+## Milestone 1 — environment + skeleton ✅
 
-- Backend does not connect to the database yet (Milestone 2).
-- Swagger UI not added yet; only the built-in OpenAPI JSON (Milestone 2).
-- Other docs (ARCHITECTURE, DEMO-SCRIPT, TROUBLESHOOTING, ML-EVALUATION) come in later milestones.
+Compose Postgres 16.15 + pgvector 0.8.7 (host port 5434); empty API / frontend / ML apps with
+health checks; `.env.example`; README.
+
+## Milestone 2 — backend core ✅
+
+- **Domain** (`TileTwin.Domain`): entities with `DataOrigin` + `SeedBatchId`, enums, roles,
+  `MachineStatusCalculator` (Offline > Critical > Unknown > Warning > Normal; stale = >5 min).
+- **Infrastructure**: `TileTwinDbContext` (Identity + business tables), migration `InitialCreate`,
+  all business FKs `Restrict`. Deterministic `DemoSeeder` (fixed seed 20261022, Npgsql binary COPY,
+  ~12 s for 493,561 readings). Reset deletes only `Synthetic` + `demo-v1` rows in one transaction;
+  master data (site/zones/machines/sensors) is upserted so user rows referencing it survive;
+  synthetic parents with user-created children are kept.
+- **Scripted patterns** (`SignalModel`): HP-002 vibration/temperature drift → Critical;
+  PUMP-002 flow gap → Unknown; CONV-003 flagged offline + no readings → Offline. Verified via API.
+- **API**: `GET /api/health` (DB + feature flags), `GET /api/zones`, `GET /api/zones/{id}`,
+  `GET /api/machines?zoneId&status`, `GET /api/machines/{id}` (sensors, limits, latest values,
+  maintenance), `PUT /api/machines/{id}/state` (MaintenanceEngineer/Admin), `POST /api/auth/login`,
+  `GET /api/auth/me`. Swagger UI at `/swagger`. Latest-reading lookup uses a LATERAL query (~7–10 ms).
+- **Auth**: ASP.NET Core Identity + JWT (8 h), lockout after 5 failures, audit log for logins and writes.
+  Dev users only in Development with `DEV_SEED_USER_PASSWORD` (local `.env` has a random one).
+- **Config**: repo-root `.env` is loaded by the API; startup fails clearly if `POSTGRES_CONNECTION`
+  or `JWT__SigningKey` is missing; logs which optional features are disabled.
+
+### Decisions / deviations (please review)
+
+- **Status precedence**: spec lists Unknown before Critical; implemented Critical above Unknown so a
+  critical reading is never hidden by another sensor's missing data. Missing data is still never Normal.
+- **Read endpoints are anonymous**; all writes need JWT + role. Reason: with `DEV_SEED_USER_PASSWORD`
+  empty there are no users, and the spec requires non-AI modules to work with every optional variable empty.
+- `SensorReadings` uses a `bigint` identity key (high volume) instead of GUID.
+- Tables for Alerts, TileInspections, MlModels, WorkflowExecutions, Reports, Documents/Chunks and
+  ObservationAttachments are added in the milestones that use them (not created empty up front).
+- Swagger UI has no "Authorize" button yet; use curl/HTTP file with a bearer token for writes.
+
+### Known limitations
+
+- No live simulator yet → machines become `Offline` 5 min after seeding (Milestone 4 fixes this).
+- Dev DB is seeded once; "Reset demo data" endpoint comes with Administration (Milestone 11).
 
 ## Next
 
-Milestone 2 — domain, DbContext, migrations, deterministic seed, machine/zone endpoints,
-health incl. DB, Swagger, JWT + roles, status-calculation tests.
+Milestone 3 — frontend shell, theme, navigation, procedural 3D factory wired to the API.

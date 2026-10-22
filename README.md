@@ -5,6 +5,9 @@ predictive maintenance and AI assistant for the **TileTwin Demonstration Facilit
 **fictional** tile plant. All data is synthetic. This is a prototype with no security audit;
 do not deploy it as-is.
 
+> PDF reports will use QuestPDF. Its Community licence is free only for organisations under the
+> revenue threshold — a company adopting this must check QuestPDF licensing.
+
 ## Prerequisites
 
 | Tool | Version used |
@@ -19,7 +22,7 @@ do not deploy it as-is.
 | Service | URL |
 |---|---|
 | PostgreSQL 16 + pgvector (Docker) | `localhost:5434` |
-| Backend API | http://localhost:5080 (health: `/api/health`, OpenAPI: `/openapi/v1.json`) |
+| Backend API | http://localhost:5080 (health: `/api/health`, Swagger UI: `/swagger`, OpenAPI: `/openapi/v1.json`) |
 | ML service | http://localhost:8001 (health: `/health`) |
 | Frontend | http://localhost:5180 (proxies `/api` to the backend) |
 
@@ -32,8 +35,11 @@ copy .env.example .env
 # 2. Database
 docker compose -f database/docker-compose.yml --env-file .env up -d
 
-# 3. Backend
+# 3. Backend (migrations + demo seed run automatically on first API start)
+dotnet tool restore
 dotnet restore backend/TileTwin.slnx
+# optional, to apply migrations by hand:
+dotnet ef database update --project backend/TileTwin.Infrastructure --startup-project backend/TileTwin.Api
 
 # 4. ML service
 cd ml-service
@@ -55,7 +61,26 @@ cd ml-service; .venv\Scripts\python -m uvicorn app.main:app --port 8001
 cd frontend; npm run dev
 ```
 
+## Users and access
+
+- Read endpoints are open (demo viewer). Every write endpoint requires a JWT with a suitable role
+  (`Viewer`, `Inspector`, `MaintenanceEngineer`, `Admin`). Get one from `POST /api/auth/login`.
+- There is **no default admin password**. Dev users are created only when the environment is
+  `Development` **and** `DEV_SEED_USER_PASSWORD` is set: `dev.viewer@tiletwin.local`,
+  `dev.inspector@…`, `dev.maintenanceengineer@…`, `dev.admin@…` (all labelled DEV ONLY), password = that variable.
+
+## Demo data
+
+On first start the API seeds a deterministic synthetic dataset (fixed random seed): 1 site, 5 zones,
+16 machines, 49 sensors, 7 days of 1-minute readings (~494k rows), 25 inspection observations,
+maintenance records and production batches. Every row is `DataOrigin = Synthetic`, `SeedBatchId = demo-v1`.
+Readings are anchored to the seed time; until the live simulator exists (Milestone 4) machines turn
+`Offline` 5 minutes after seeding, because no new readings arrive.
+
 ## Tests
+
+Backend integration tests use a real PostgreSQL database `tiletwin_test` (created automatically in
+the docker compose Postgres), so start the database first.
 
 ```powershell
 dotnet test backend/TileTwin.slnx
