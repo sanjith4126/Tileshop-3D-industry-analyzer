@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiGet } from './client'
-import type { Alert, Health, Predictive, PredictiveListItem, InspectionZone, ObservationDetail, ObservationSummary, MachineDetail, MachineSummary, ReadingsRange, ReadingsResponse, Zone } from './types'
+import type { Alert, Health, Report, ReportListItem, Predictive, PredictiveListItem, InspectionZone, ObservationDetail, ObservationSummary, MachineDetail, MachineSummary, ReadingsRange, ReadingsResponse, Zone } from './types'
 
 /** Live data polling interval (spec: 5–10 s). */
 export const POLL_MS = 7000
@@ -70,3 +70,9 @@ export const usePredictive = (machineId: string | null) =>
     enabled: !!machineId,
     refetchInterval: 30_000,
   })
+
+export const useReports = () =>
+  useQuery({ queryKey: ['reports'], queryFn: ({ signal }) => apiGet<ReportListItem[]>('/api/reports', signal) })
+
+export const useReport = (id: string) =>
+  useQuery({ queryKey: ['report', id], queryFn: ({ signal }) => apiGet<Report>(`/api/reports/${encodeURIComponent(id)}`, signal) })

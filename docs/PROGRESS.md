@@ -2,7 +2,7 @@
 
 ## Current state
 
-**Milestones 1–6 DONE (2026-10-23).** Next: Milestone 7 (Reports + PDF).
+**Milestones 1–7 DONE (2026-10-23).** Next: Milestone 8 (AI Assistant + maintenance-prioritisation workflow).
 
 ## Environment (2026-10-22, Windows 11)
 
@@ -20,8 +20,8 @@ Ports: Postgres 5434, API 5080, ML 8001, frontend 5180 (5173 is taken by another
 
 | Suite | Command | Result |
 |---|---|---|
-| Backend (xUnit, real Postgres `tiletwin_test`) | `dotnet test backend/TileTwin.slnx` | 49 passed, 0 failed (~70 s, mostly re-seeding 494k readings) |
-| Frontend (Vitest) | `npm test` | 10 passed; `npm run build` OK |
+| Backend (xUnit, real Postgres `tiletwin_test`) | `dotnet test backend/TileTwin.slnx` | 56 passed, 0 failed (~65 s, mostly re-seeding 494k readings) |
+| Frontend (Vitest) | `npm test` | 11 passed; `npm run build` OK |
 | ML (pytest) | `.venv\Scripts\python -m pytest` | 11 passed (1 harmless Starlette/httpx deprecation warning) |
 
 ## Milestone 1 — environment + skeleton ✅
@@ -163,6 +163,28 @@ health checks; `.env.example`; README.
 - Training data is a simple synthetic noise model; thresholds would need re-calibration on real data.
 - Scores are stored every 5 minutes for 14 machines (~4k rows/day); no retention policy yet.
 
+## Milestone 7 — Reports ✅
+
+- `Reports` table (migration `Reports`): type, status (Draft/Final), parameters, structured JSON content,
+  generated UTC/by. Reports are user-created rows (`DataOrigin = Real`); their content states whether
+  the source data is synthetic.
+- `ReportBuilder` (records only): **Factory health**, **Machine anomalies** (threshold alerts + ML
+  anomalies + rule-based suggestions with the review label), **Maintenance history**, **Site inspection**
+  (deterministic summary, observations, overdue actions). Each has title, generated UTC, period, filters,
+  summary, tables, recommendations, data source and the SYNTHETIC DATA label. Empty periods produce a
+  valid "No records for this period." report.
+- `PdfRenderer` (QuestPDF, Community licence — see README note). API: `POST /api/reports` (any signed-in
+  role, period ≤ 366 days), `GET /api/reports`, `GET /api/reports/{id}`, `GET /api/reports/{id}/pdf`.
+- UI: Reports page (type, period, machine/zone filter, list with PDF links), browser view of a report,
+  "Anomaly report (PDF)" link from Predictive Maintenance (Scenario B).
+- Verified: anomaly report for HP-002 generated via API, PDF 55 KB starting `%PDF`; browser view DOM checked.
+
+### Known limitations (M7)
+
+- Stretch report types (tile defects, production quality) not built yet.
+- The Chrome automation could not capture screenshots of some pages (CDP timeout); content was
+  verified through the DOM instead.
+
 ## Next
 
-Milestone 7 — Reports (factory health, machine anomalies, maintenance history, site inspection) + PDF.
+Milestone 8 — AI Assistant (tool calling, not-configured state) + maintenance-prioritisation workflow.

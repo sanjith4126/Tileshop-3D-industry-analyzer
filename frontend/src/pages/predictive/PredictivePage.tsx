@@ -48,6 +48,7 @@ function Detail({ machineId }: { machineId: string }) {
         <div className="ml-auto flex gap-2">
           <button onClick={() => { focusEntity(m.id); navigate('/twin') }} className="rounded bg-slate-800 px-3 py-1.5 text-xs hover:bg-slate-700">Show in 3D</button>
           <Link to={`/monitoring/${m.id}`} className="rounded bg-slate-800 px-3 py-1.5 text-xs hover:bg-slate-700">Monitoring →</Link>
+          <Link to={`/reports?type=MachineAnomalies&machine=${m.id}`} className="rounded bg-slate-800 px-3 py-1.5 text-xs hover:bg-slate-700">Anomaly report (PDF) →</Link>
         </div>
       </header>
 

@@ -220,3 +220,35 @@ export interface Predictive {
   reviewLabel: string
   failurePrediction: string
 }
+
+export type ReportType = 'FactoryHealth' | 'MachineAnomalies' | 'MaintenanceHistory' | 'SiteInspection'
+
+export interface ReportDocument {
+  title: string
+  type: ReportType
+  generatedUtc: string
+  fromUtc: string
+  toUtc: string
+  filters: Record<string, string>
+  summary: string[]
+  sections: { heading: string; paragraphs: string[]; table: { columns: string[]; rows: string[][] } | null }[]
+  recommendations: string[]
+  dataSource: string
+  containsSyntheticData: boolean
+}
+
+export interface Report {
+  id: string
+  status: 'Draft' | 'Final'
+  generatedBy: string | null
+  document: ReportDocument
+}
+
+export interface ReportListItem {
+  id: string
+  type: ReportType
+  status: 'Draft' | 'Final'
+  title: string
+  generatedUtc: string
+  generatedBy: string | null
+}

@@ -50,6 +50,8 @@ builder.Services.AddScoped<IdentitySeeder>();
 builder.Services.AddScoped<AlertService>();
 builder.Services.AddScoped<InspectionService>();
 builder.Services.AddScoped<PredictiveService>();
+builder.Services.AddScoped<TileTwin.Api.Reports.ReportBuilder>();
+builder.Services.AddScoped<TileTwin.Api.Reports.ReportService>();
 builder.Services.AddScoped<AnomalyScoringService>();
 builder.Services.AddSingleton<MlStatus>();
 builder.Services.AddHttpClient<MlClient>(c =>

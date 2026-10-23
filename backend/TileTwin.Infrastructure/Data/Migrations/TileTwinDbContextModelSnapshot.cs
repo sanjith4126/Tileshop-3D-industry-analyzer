@@ -754,6 +754,55 @@ namespace TileTwin.Infrastructure.Data.Migrations
                     b.ToTable("ProductionBatches");
                 });
 
+            modelBuilder.Entity("TileTwin.Domain.Entities.Report", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DataOrigin")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("GeneratedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("GeneratedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ParametersJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SeedBatchId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GeneratedUtc");
+
+                    b.ToTable("Reports");
+                });
+
             modelBuilder.Entity("TileTwin.Domain.Entities.SensorDefinition", b =>
                 {
                     b.Property<string>("Id")

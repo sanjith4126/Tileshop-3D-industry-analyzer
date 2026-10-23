@@ -9,6 +9,8 @@ import MachineDetailPage from './pages/monitoring/MachineDetailPage'
 import MonitoringPage from './pages/monitoring/MonitoringPage'
 import PlaceholderPage from './pages/PlaceholderPage'
 import PredictivePage from './pages/predictive/PredictivePage'
+import ReportsPage from './pages/reports/ReportsPage'
+import ReportViewPage from './pages/reports/ReportView'
 
 // three.js is large: load the twin only when visited.
 const TwinPage = lazy(() => import('./twin/TwinPage'))
@@ -27,7 +29,8 @@ export default function App() {
         <Route path="predictive" element={<PredictivePage />} />
         <Route path="assistant" element={<PlaceholderPage title="AI Assistant" milestone={8} />} />
         <Route path="knowledge" element={<PlaceholderPage title="Knowledge Centre" milestone={10} />} />
-        <Route path="reports" element={<PlaceholderPage title="Reports" milestone={7} />} />
+        <Route path="reports" element={<ReportsPage />} />
+        <Route path="reports/:id" element={<ReportViewPage />} />
         <Route path="admin" element={<PlaceholderPage title="Administration" milestone={11} />} />
         <Route path="*" element={<PlaceholderPage title="Page not found" />} />
       </Route>

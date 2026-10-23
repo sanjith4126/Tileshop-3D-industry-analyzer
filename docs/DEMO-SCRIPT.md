@@ -40,7 +40,8 @@ Glazing & Inspection zone has open Critical/High observations with corrective-ac
    "Suggestion — requires review by a qualified engineer."
    - ML scores refresh every 5 minutes; signed-in users can press **Score now**.
    - Stop the ML service to show the honest "ML service unavailable — no anomaly score" state.
-5. Maintenance-prioritisation workflow and PDF report: Milestones 7–8.
+5. Click **Anomaly report (PDF) →**, sign in (any dev user), **Generate report**, then **Download PDF**.
+6. Maintenance-prioritisation workflow: Milestone 8.
 
 ## Scenario C — Tile quality (Milestone 9)
 

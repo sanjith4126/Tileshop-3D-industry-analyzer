@@ -16,8 +16,8 @@ public class InspectionTests(ApiFactory factory)
     public async Task Zones_list_counts_and_filters_work()
     {
         var client = factory.CreateClient();
-        var zones = await client.GetFromJsonAsync<List<InspectionZoneDto>>("/api/inspection/zones", Json);
-        Assert.Equal(25, zones!.Sum(z => z.Total));
+        var zones = (await client.GetFromJsonAsync<List<InspectionZoneDto>>("/api/inspection/zones", Json))!;
+        Assert.Equal(25, zones.Sum(z => z.Total));
         Assert.True(zones.Single(z => z.Id == Glaze).OpenHighPriority >= 2);
 
         var high = await client.GetFromJsonAsync<List<ObservationSummaryDto>>($"/api/observations?zoneId={Glaze}&priority=High&status=Open", Json);
