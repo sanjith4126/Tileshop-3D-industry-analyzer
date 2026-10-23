@@ -31,6 +31,8 @@ public class TileTwinDbContext(DbContextOptions<TileTwinDbContext> options) : Id
     public DbSet<Inspection> Inspections => Set<Inspection>();
     public DbSet<InspectionObservation> InspectionObservations => Set<InspectionObservation>();
     public DbSet<CorrectiveAction> CorrectiveActions => Set<CorrectiveAction>();
+    public DbSet<ObservationAttachment> ObservationAttachments => Set<ObservationAttachment>();
+    public DbSet<ObservationEvent> ObservationEvents => Set<ObservationEvent>();
     public DbSet<MaintenanceRecord> MaintenanceRecords => Set<MaintenanceRecord>();
     public DbSet<ProductionBatch> ProductionBatches => Set<ProductionBatch>();
     public DbSet<AuditLogEntry> AuditLog => Set<AuditLogEntry>();
@@ -69,6 +71,10 @@ public class TileTwinDbContext(DbContextOptions<TileTwinDbContext> options) : Id
         });
         b.Entity<CorrectiveAction>().HasOne<InspectionObservation>().WithMany(o => o.CorrectiveActions)
             .HasForeignKey(a => a.ObservationId);
+        b.Entity<ObservationAttachment>().HasOne<InspectionObservation>().WithMany(o => o.Attachments)
+            .HasForeignKey(a => a.ObservationId);
+        b.Entity<ObservationEvent>().HasOne<InspectionObservation>().WithMany(o => o.Events)
+            .HasForeignKey(e => e.ObservationId);
         b.Entity<MaintenanceRecord>(e =>
         {
             e.HasOne<Machine>().WithMany().HasForeignKey(m => m.MachineId);

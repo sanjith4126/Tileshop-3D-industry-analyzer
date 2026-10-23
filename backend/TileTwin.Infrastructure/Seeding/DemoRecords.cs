@@ -101,6 +101,33 @@ public static class DemoRecords
         return (inspections, observations, actions);
     }
 
+    /// <summary>Placeholder photos (generated SVGs, labelled) for equipment/safety findings, and a history per observation.</summary>
+    public static (List<ObservationAttachment>, List<ObservationEvent>) BuildObservationExtras(List<InspectionObservation> observations)
+    {
+        var attachments = new List<ObservationAttachment>();
+        var events = new List<ObservationEvent>();
+        for (var i = 0; i < observations.Count; i++)
+        {
+            var o = observations[i];
+            if (o.Category is C.Equipment or C.Safety || o.Priority >= P.High)
+                attachments.Add(Tag(new ObservationAttachment
+                {
+                    Id = StableGuid($"att:{i}"), ObservationId = o.Id, FileName = $"photo-{i + 1:00}.svg",
+                    Caption = $"Site photo — {o.Category} finding", IsPlaceholder = true, CreatedUtc = o.CreatedUtc.AddMinutes(1),
+                }));
+
+            void Event(int n, DateTime t, string user, string action, string? details) =>
+                events.Add(Tag(new ObservationEvent { Id = StableGuid($"evt:{i}:{n}"), ObservationId = o.Id, TimestampUtc = t, UserName = user, Action = action, Details = details }));
+
+            Event(0, o.CreatedUtc, "Inspector (demo)", "Created", $"Priority {o.Priority}, category {o.Category}");
+            Event(1, o.CreatedUtc.AddMinutes(20), "Inspector (demo)", "Assigned", $"Assigned to {o.AssignedRole}");
+            if (o.Status != S.Open) Event(2, o.CreatedUtc.AddHours(4), "Maintenance team (demo)", "Status changed", $"Open → {S.InProgress}");
+            if (o.Status is S.Resolved or S.Closed) Event(3, o.UpdatedUtc, "Maintenance team (demo)", "Status changed", $"{S.InProgress} → {S.Resolved}");
+            if (o.Status == S.Closed) Event(4, o.UpdatedUtc.AddHours(2), "Inspector (demo)", "Status changed", $"{S.Resolved} → {S.Closed} (verified on site)");
+        }
+        return (attachments, events);
+    }
+
     public static List<MaintenanceRecord> BuildMaintenance(DateTime anchor)
     {
         var list = new List<MaintenanceRecord>();

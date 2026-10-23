@@ -28,3 +28,10 @@ export function formatUtc(iso: string | null | undefined) {
 export function formatValue(v: number | null, unit: string) {
   return v == null ? 'no data' : `${Number(v.toFixed(2))} ${unit}`
 }
+
+export const PRIORITY_CLASS: Record<string, string> = {
+  Critical: 'bg-red-500/20 text-red-300 ring-red-500/50',
+  High: 'bg-orange-500/15 text-orange-300 ring-orange-500/40',
+  Medium: 'bg-sky-500/15 text-sky-300 ring-sky-500/40',
+  Low: 'bg-slate-500/20 text-slate-300 ring-slate-500/40',
+}

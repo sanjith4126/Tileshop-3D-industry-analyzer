@@ -539,6 +539,82 @@ namespace TileTwin.Infrastructure.Data.Migrations
                     b.ToTable("MaintenanceRecords");
                 });
 
+            modelBuilder.Entity("TileTwin.Domain.Entities.ObservationAttachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Caption")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DataOrigin")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsPlaceholder")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("ObservationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SeedBatchId")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ObservationId");
+
+                    b.ToTable("ObservationAttachments");
+                });
+
+            modelBuilder.Entity("TileTwin.Domain.Entities.ObservationEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DataOrigin")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Details")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("ObservationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SeedBatchId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("TimestampUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ObservationId");
+
+                    b.ToTable("ObservationEvents");
+                });
+
             modelBuilder.Entity("TileTwin.Domain.Entities.ProductionBatch", b =>
                 {
                     b.Property<Guid>("Id")
@@ -961,6 +1037,24 @@ namespace TileTwin.Infrastructure.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("TileTwin.Domain.Entities.ObservationAttachment", b =>
+                {
+                    b.HasOne("TileTwin.Domain.Entities.InspectionObservation", null)
+                        .WithMany("Attachments")
+                        .HasForeignKey("ObservationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TileTwin.Domain.Entities.ObservationEvent", b =>
+                {
+                    b.HasOne("TileTwin.Domain.Entities.InspectionObservation", null)
+                        .WithMany("Events")
+                        .HasForeignKey("ObservationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("TileTwin.Domain.Entities.ProductionBatch", b =>
                 {
                     b.HasOne("TileTwin.Domain.Entities.Machine", null)
@@ -1014,7 +1108,11 @@ namespace TileTwin.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("TileTwin.Domain.Entities.InspectionObservation", b =>
                 {
+                    b.Navigation("Attachments");
+
                     b.Navigation("CorrectiveActions");
+
+                    b.Navigation("Events");
                 });
 
             modelBuilder.Entity("TileTwin.Domain.Entities.Machine", b =>

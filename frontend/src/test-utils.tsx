@@ -18,7 +18,7 @@ export function renderWithProviders(ui: ReactNode, route = '/') {
 
 /** Stub fetch with a map of path → JSON body (anything else → 404). */
 export function mockApi(routes: Record<string, unknown>) {
-  const fn = vi.fn(async (input: RequestInfo | URL) => {
+  const fn = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
     const path = typeof input === 'string' ? input : input.toString()
     const key = Object.keys(routes).find((k) => path === k || path.startsWith(k + '?'))
     if (!key) return new Response('not found', { status: 404 })

@@ -48,6 +48,7 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<DemoSeeder>();
 builder.Services.AddScoped<IdentitySeeder>();
 builder.Services.AddScoped<AlertService>();
+builder.Services.AddScoped<InspectionService>();
 builder.Services.AddScoped<ReadingsService>();
 builder.Services.AddScoped<SimulationEngine>();
 if (builder.Configuration.GetValue("Simulator:Enabled", true))

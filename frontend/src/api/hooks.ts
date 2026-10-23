@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiGet } from './client'
-import type { Alert, Health, MachineDetail, MachineSummary, ReadingsRange, ReadingsResponse, Zone } from './types'
+import type { Alert, Health, InspectionZone, ObservationDetail, ObservationSummary, MachineDetail, MachineSummary, ReadingsRange, ReadingsResponse, Zone } from './types'
 
 /** Live data polling interval (spec: 5–10 s). */
 export const POLL_MS = 7000
@@ -44,3 +44,18 @@ export const useReadings = (machineId: string, range: ReadingsRange) =>
     queryFn: ({ signal }) => apiGet<ReadingsResponse>(`/api/machines/${encodeURIComponent(machineId)}/readings?range=${range}`, signal),
     refetchInterval: range === '1h' ? POLL_MS : 30_000,
   })
+
+export const useInspectionZones = () =>
+  useQuery({ queryKey: ['inspection-zones'], queryFn: ({ signal }) => apiGet<InspectionZone[]>('/api/inspection/zones', signal), refetchInterval: 30_000 })
+
+export const useObservations = (filters: Record<string, string>) =>
+  useQuery({
+    queryKey: ['observations', filters],
+    queryFn: ({ signal }) => {
+      const p = new URLSearchParams(Object.entries(filters).filter(([, v]) => v))
+      return apiGet<ObservationSummary[]>(`/api/observations?${p}`, signal)
+    },
+  })
+
+export const useObservation = (id: string) =>
+  useQuery({ queryKey: ['observation', id], queryFn: ({ signal }) => apiGet<ObservationDetail>(`/api/observations/${encodeURIComponent(id)}`, signal) })

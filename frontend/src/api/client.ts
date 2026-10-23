@@ -19,7 +19,7 @@ export async function apiGet<T>(path: string, signal?: AbortSignal): Promise<T> 
 }
 
 /** Write request with the signed-in user's bearer token. Throws ApiError with the server's message. */
-export async function apiSend<T>(method: 'POST' | 'PUT' | 'DELETE', path: string, body: unknown, token: string | null): Promise<T> {
+export async function apiSend<T>(method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: string, body: unknown, token: string | null): Promise<T> {
   let res: Response
   try {
     res = await fetch(path, {

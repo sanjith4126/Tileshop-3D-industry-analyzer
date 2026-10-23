@@ -40,6 +40,9 @@ public class DemoSeeder(TileTwinDbContext db, ILogger<DemoSeeder> log)
         await AddMissingAsync(db.Inspections, inspections, x => x.Id, ct);
         await AddMissingAsync(db.InspectionObservations, observations, x => x.Id, ct);
         await AddMissingAsync(db.CorrectiveActions, actions, x => x.Id, ct);
+        var (attachments, events) = DemoRecords.BuildObservationExtras(observations);
+        await AddMissingAsync(db.ObservationAttachments, attachments, x => x.Id, ct);
+        await AddMissingAsync(db.ObservationEvents, events, x => x.Id, ct);
         await AddMissingAsync(db.MaintenanceRecords, DemoRecords.BuildMaintenance(anchor), x => x.Id, ct);
         await AddMissingAsync(db.ProductionBatches, DemoRecords.BuildBatches(anchor, rng), x => x.Id, ct);
 
@@ -63,8 +66,13 @@ public class DemoSeeder(TileTwinDbContext db, ILogger<DemoSeeder> log)
         await db.Alerts.Where(IsDemo<Alert>())
             .Where(a => !db.AlertAcknowledgements.Any(h => h.AlertId == a.Id)).ExecuteDeleteAsync(ct);
         await db.CorrectiveActions.Where(IsDemo<CorrectiveAction>()).ExecuteDeleteAsync(ct);
+        await db.ObservationAttachments.Where(IsDemo<ObservationAttachment>()).ExecuteDeleteAsync(ct);
+        await db.ObservationEvents.Where(IsDemo<ObservationEvent>()).ExecuteDeleteAsync(ct);
         await db.InspectionObservations.Where(IsDemo<InspectionObservation>())
-            .Where(o => !db.CorrectiveActions.Any(a => a.ObservationId == o.Id)).ExecuteDeleteAsync(ct);
+            .Where(o => !db.CorrectiveActions.Any(a => a.ObservationId == o.Id)
+                        && !db.ObservationAttachments.Any(a => a.ObservationId == o.Id)
+                        && !db.ObservationEvents.Any(e => e.ObservationId == o.Id))
+            .ExecuteDeleteAsync(ct);
         await db.Inspections.Where(IsDemo<Inspection>())
             .Where(i => !db.InspectionObservations.Any(o => o.InspectionId == i.Id)).ExecuteDeleteAsync(ct);
         await db.MaintenanceRecords.Where(IsDemo<MaintenanceRecord>()).ExecuteDeleteAsync(ct);

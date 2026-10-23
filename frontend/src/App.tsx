@@ -3,6 +3,8 @@ import { Route, Routes } from 'react-router'
 import { Layout } from './components/Layout'
 import { Loading } from './components/States'
 import OverviewPage from './pages/OverviewPage'
+import InspectionPage from './pages/inspection/InspectionPage'
+import ObservationDetailPage from './pages/inspection/ObservationDetailPage'
 import MachineDetailPage from './pages/monitoring/MachineDetailPage'
 import MonitoringPage from './pages/monitoring/MonitoringPage'
 import PlaceholderPage from './pages/PlaceholderPage'
@@ -16,7 +18,8 @@ export default function App() {
       <Route element={<Layout />}>
         <Route index element={<OverviewPage />} />
         <Route path="twin" element={<Suspense fallback={<Loading label="Loading 3D twin…" />}><TwinPage /></Suspense>} />
-        <Route path="inspection/*" element={<PlaceholderPage title="Remote Site Inspection" milestone={5} />} />
+        <Route path="inspection" element={<InspectionPage />} />
+        <Route path="inspection/:id" element={<ObservationDetailPage />} />
         <Route path="monitoring" element={<MonitoringPage />} />
         <Route path="monitoring/:id" element={<MachineDetailPage />} />
         <Route path="tile-quality" element={<PlaceholderPage title="Tile Quality Inspection" milestone={9} />} />

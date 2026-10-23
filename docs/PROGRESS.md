@@ -2,7 +2,7 @@
 
 ## Current state
 
-**Milestones 1–4 DONE (2026-10-23).** Next: Milestone 5 (Remote Site Inspection).
+**Milestones 1–5 DONE (2026-10-23).** Next: Milestone 6 (ML service + Predictive Maintenance).
 
 ## Environment (2026-10-22, Windows 11)
 
@@ -20,8 +20,8 @@ Ports: Postgres 5434, API 5080, ML 8001, frontend 5180 (5173 is taken by another
 
 | Suite | Command | Result |
 |---|---|---|
-| Backend (xUnit, real Postgres `tiletwin_test`) | `dotnet test backend/TileTwin.slnx` | 33 passed, 0 failed (~2 min, mostly re-seeding 494k readings) |
-| Frontend (Vitest) | `npm test` | 7 passed; `npm run build` OK |
+| Backend (xUnit, real Postgres `tiletwin_test`) | `dotnet test backend/TileTwin.slnx` | 40 passed, 0 failed (~45 s–2 min, mostly re-seeding 494k readings) |
+| Frontend (Vitest) | `npm test` | 8 passed; `npm run build` OK |
 | ML (pytest) | `pytest` | 1 passed (M1) |
 
 ## Milestone 1 — environment + skeleton ✅
@@ -117,6 +117,25 @@ health checks; `.env.example`; README.
 - Alerts are never auto-resolved when a value returns within limits; a human resolves them (by design).
 - The simulator adds ~850k rows/day while running; "Reset demo data" (M11) clears them.
 
+## Milestone 5 — Remote Site Inspection ✅
+
+- New tables (migration `InspectionExtras`): `ObservationAttachments` (demo attachments are generated
+  SVGs labelled **SYNTHETIC PLACEHOLDER IMAGE**) and `ObservationEvents` (history: created, assigned,
+  status changes, comments). Seeded deterministically; reset keeps observations that have user rows.
+- API: `GET /api/inspection/zones` (open / high counts), `GET /api/observations` (zone, status,
+  priority, search; max 200), `GET /api/observations/{id}` (corrective actions with overdue flag,
+  attachments, history), `PATCH /api/observations/{id}` (Inspector/Admin; status, assignment, comment;
+  audit-logged), `POST /api/inspection/summary` (deterministic `InspectionSummaryBuilder`, cites
+  `OBS-xxxxxx` codes, returns focus entity IDs), `GET /api/observations/attachments/{id}` (SVG).
+- UI: zone list with counts and "3D" (highlights the zone in the twin), filters, observations table,
+  observation detail (actions, history, attachments, update form for Inspector/Admin), summary panel
+  with "Show … in 3D". Scenario A verified in Chrome; written up in `docs/DEMO-SCRIPT.md`.
+
+### Known limitations (M5)
+
+- No upload of real attachments and no UI to add corrective actions (not required by the spec).
+- Summary wording is template-based; optional LLM wording arrives with the AI assistant (M8).
+
 ## Next
 
-Milestone 5 — Remote Site Inspection (zones → observations → detail, status/assign, 3D zone highlight, summary).
+Milestone 6 — ML service (Isolation Forest, evaluation doc, tests) + Predictive Maintenance page.

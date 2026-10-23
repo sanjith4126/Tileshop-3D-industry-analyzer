@@ -26,6 +26,30 @@ public class InspectionObservation : BusinessEntity
     public DateTime CreatedUtc { get; set; }
     public DateTime UpdatedUtc { get; set; }
     public List<CorrectiveAction> CorrectiveActions { get; set; } = [];
+    public List<ObservationAttachment> Attachments { get; set; } = [];
+    public List<ObservationEvent> Events { get; set; } = [];
+}
+
+/// <summary>Attachment metadata. Demo attachments are generated placeholder images, clearly labelled as such.</summary>
+public class ObservationAttachment : BusinessEntity
+{
+    public Guid Id { get; set; }
+    public Guid ObservationId { get; set; }
+    public required string FileName { get; set; }
+    public required string Caption { get; set; }
+    public bool IsPlaceholder { get; set; }
+    public DateTime CreatedUtc { get; set; }
+}
+
+/// <summary>History entry for an observation (created, status change, assignment, comment).</summary>
+public class ObservationEvent : BusinessEntity
+{
+    public Guid Id { get; set; }
+    public Guid ObservationId { get; set; }
+    public DateTime TimestampUtc { get; set; }
+    public required string UserName { get; set; }
+    public required string Action { get; set; }
+    public string? Details { get; set; }
 }
 
 public class CorrectiveAction : BusinessEntity
