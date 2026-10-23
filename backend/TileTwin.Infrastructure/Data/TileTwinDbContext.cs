@@ -38,6 +38,8 @@ public class TileTwinDbContext(DbContextOptions<TileTwinDbContext> options) : Id
     public DbSet<AuditLogEntry> AuditLog => Set<AuditLogEntry>();
     public DbSet<Alert> Alerts => Set<Alert>();
     public DbSet<AlertAcknowledgement> AlertAcknowledgements => Set<AlertAcknowledgement>();
+    public DbSet<AnomalyScore> AnomalyScores => Set<AnomalyScore>();
+    public DbSet<MlModel> MlModels => Set<MlModel>();
     public DbSet<DemoState> DemoState => Set<DemoState>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
@@ -91,6 +93,11 @@ public class TileTwinDbContext(DbContextOptions<TileTwinDbContext> options) : Id
             e.HasOne<Machine>().WithMany().HasForeignKey(a => a.MachineId);
             e.HasOne<SensorDefinition>().WithMany().HasForeignKey(a => a.SensorId);
             e.HasIndex(a => new { a.Status, a.MachineId });
+        });
+        b.Entity<AnomalyScore>(e =>
+        {
+            e.HasOne<Machine>().WithMany().HasForeignKey(a => a.MachineId);
+            e.HasIndex(a => new { a.MachineId, a.TimestampUtc });
         });
         b.Entity<AlertAcknowledgement>().HasOne<Alert>().WithMany(a => a.History).HasForeignKey(h => h.AlertId);
 

@@ -15,7 +15,7 @@ const machine = (id: string, status: MachineSummary['status'], reasons: string[]
 })
 
 const health: Health = {
-  status: 'ok', database: 'ok', demoData: null, timestampUtc: '',
+  status: 'ok', database: 'ok', demoData: null, timestampUtc: '', ml: { available: false, message: 'ML service unavailable', lastCheckedUtc: null },
   features: { ai: false, embeddings: false, mlServiceUrl: 'http://localhost:8001', devUsers: true },
 }
 

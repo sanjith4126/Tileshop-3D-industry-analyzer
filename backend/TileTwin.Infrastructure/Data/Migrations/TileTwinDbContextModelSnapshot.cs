@@ -248,6 +248,56 @@ namespace TileTwin.Infrastructure.Data.Migrations
                     b.ToTable("AlertAcknowledgements");
                 });
 
+            modelBuilder.Entity("TileTwin.Domain.Entities.AnomalyScore", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DataOrigin")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<bool>("IsAnomaly")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("MachineId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<double?>("MaxFeatureZ")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("ModelVersion")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<double>("Score")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("SeedBatchId")
+                        .HasColumnType("text");
+
+                    b.Property<double>("Threshold")
+                        .HasColumnType("double precision");
+
+                    b.Property<DateTime>("TimestampUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TopDeviationsJson")
+                        .HasColumnType("text");
+
+                    b.Property<double?>("ZThreshold")
+                        .HasColumnType("double precision");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MachineId", "TimestampUtc");
+
+                    b.ToTable("AnomalyScores");
+                });
+
             modelBuilder.Entity("TileTwin.Domain.Entities.AuditLogEntry", b =>
                 {
                     b.Property<Guid>("Id")
@@ -537,6 +587,48 @@ namespace TileTwin.Infrastructure.Data.Migrations
                     b.HasIndex("MachineId", "PerformedUtc");
 
                     b.ToTable("MaintenanceRecords");
+                });
+
+            modelBuilder.Entity("TileTwin.Domain.Entities.MlModel", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DataOrigin")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("EvaluationSummaryJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MachineType")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SeedBatchId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("TrainedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("MlModels");
                 });
 
             modelBuilder.Entity("TileTwin.Domain.Entities.ObservationAttachment", b =>
@@ -965,6 +1057,15 @@ namespace TileTwin.Infrastructure.Data.Migrations
                     b.HasOne("TileTwin.Domain.Entities.Alert", null)
                         .WithMany("History")
                         .HasForeignKey("AlertId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TileTwin.Domain.Entities.AnomalyScore", b =>
+                {
+                    b.HasOne("TileTwin.Domain.Entities.Machine", null)
+                        .WithMany()
+                        .HasForeignKey("MachineId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

@@ -20,7 +20,8 @@ public class MachineService(TileTwinDbContext db, TimeProvider clock, AuditLogge
         var sensors = await LoadSensorsAsync(machines.Select(m => m.Id).ToList(), ct);
         var alerts = await OpenAlertCountsAsync(ct);
         var now = clock.GetUtcNow().UtcDateTime;
-        return machines.Select(m => Summarize(m, sensors.GetValueOrDefault(m.Id) ?? [], now, alerts.GetValueOrDefault(m.Id))).ToList();
+        var anomalies = await AnomalyScoringService.OpenAnomaliesAsync(db, now, ct);
+        return machines.Select(m => Summarize(m, sensors.GetValueOrDefault(m.Id) ?? [], now, alerts.GetValueOrDefault(m.Id), anomalies.Contains(m.Id))).ToList();
     }
 
     public async Task<MachineDetailDto?> GetAsync(string id, CancellationToken ct = default)
@@ -38,8 +39,9 @@ public class MachineService(TileTwinDbContext db, TimeProvider clock, AuditLogge
             .ToListAsync(ct);
 
         var alerts = await OpenAlertCountsAsync(ct);
+        var anomalies = await AnomalyScoringService.OpenAnomaliesAsync(db, now, ct);
         return new MachineDetailDto(
-            Summarize(m, sensors, now, alerts.GetValueOrDefault(id)),
+            Summarize(m, sensors, now, alerts.GetValueOrDefault(id), anomalies.Contains(id)),
             sensors.Select(s => new SensorDto(s.SensorId, s.Measurement, s.Unit, s.IsRequired,
                 s.WarningMin, s.WarningMax, s.CriticalMin, s.CriticalMax,
                 s.LatestValue, s.LatestTimestampUtc, SensorStateOf(s, now))).ToList(),
@@ -86,9 +88,9 @@ public class MachineService(TileTwinDbContext db, TimeProvider clock, AuditLogge
         db.Alerts.Where(a => a.Status != AlertStatus.Resolved).GroupBy(a => a.MachineId)
             .ToDictionaryAsync(g => g.Key, g => g.Count(), ct);
 
-    static MachineSummaryDto Summarize(Machine m, List<SensorRow> sensors, DateTime now, int openAlerts)
+    static MachineSummaryDto Summarize(Machine m, List<SensorRow> sensors, DateTime now, int openAlerts, bool openAnomaly)
     {
-        var result = MachineStatusCalculator.Evaluate(m.IsOffline, sensors.Select(ToState).ToList(), now);
+        var result = MachineStatusCalculator.Evaluate(m.IsOffline, sensors.Select(ToState).ToList(), now, openAnomaly);
         return new MachineSummaryDto(m.Id, m.Name, m.MachineTypeId, m.MachineType?.Name ?? m.MachineTypeId,
             m.ZoneId, m.Zone?.Name ?? m.ZoneId, result.Status, result.Reasons, m.MaintenanceStatus, m.IsOffline,
             m.Manufacturer ?? UnknownDemo, m.Model ?? UnknownDemo, m.DataOrigin,

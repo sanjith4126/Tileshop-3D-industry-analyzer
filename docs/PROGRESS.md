@@ -2,7 +2,7 @@
 
 ## Current state
 
-**Milestones 1–5 DONE (2026-10-23).** Next: Milestone 6 (ML service + Predictive Maintenance).
+**Milestones 1–6 DONE (2026-10-23).** Next: Milestone 7 (Reports + PDF).
 
 ## Environment (2026-10-22, Windows 11)
 
@@ -20,9 +20,9 @@ Ports: Postgres 5434, API 5080, ML 8001, frontend 5180 (5173 is taken by another
 
 | Suite | Command | Result |
 |---|---|---|
-| Backend (xUnit, real Postgres `tiletwin_test`) | `dotnet test backend/TileTwin.slnx` | 40 passed, 0 failed (~45 s–2 min, mostly re-seeding 494k readings) |
-| Frontend (Vitest) | `npm test` | 8 passed; `npm run build` OK |
-| ML (pytest) | `pytest` | 1 passed (M1) |
+| Backend (xUnit, real Postgres `tiletwin_test`) | `dotnet test backend/TileTwin.slnx` | 49 passed, 0 failed (~70 s, mostly re-seeding 494k readings) |
+| Frontend (Vitest) | `npm test` | 10 passed; `npm run build` OK |
+| ML (pytest) | `.venv\Scripts\python -m pytest` | 11 passed (1 harmless Starlette/httpx deprecation warning) |
 
 ## Milestone 1 — environment + skeleton ✅
 
@@ -136,6 +136,33 @@ health checks; `.env.example`; README.
 - No upload of real attachments and no UI to add corrective actions (not required by the spec).
 - Summary wording is template-based; optional LLM wording arrives with the AI assistant (M8).
 
+## Milestone 6 — ML service + Predictive Maintenance ✅
+
+- **ML service** (FastAPI + scikit-learn): one Isolation Forest per machine type on synthetic normal
+  60-min windows (features: mean, std, slope per sensor). `GET /health`, `GET /models`, `POST /train`,
+  `POST /predict` (422 "insufficient data" when a sensor has < 45 of 60 samples — never a fake score).
+  CLI: `python -m app.train`, `python -m app.evaluate`. Models auto-train at first start (~10 s).
+- **Finding**: Isolation Forest alone caught only ~5 % of sustained level shifts (values beyond the
+  training range). Added a documented feature-range check (|z| above the 99.5th percentile seen on
+  normal windows). Both results are in `docs/ML-EVALUATION.md` (synthetic data only, with caveats).
+- **Backend**: `MlClient` (typed HttpClient, 10 s timeout, honest unavailable/insufficient states),
+  `AnomalyScoringService` (last 60 one-minute samples per sensor), `AnomalyHostedService` (every 5 min +
+  model registry sync to `MlModels`), `AnomalyScores` table (migration `MlScores`). A fresh anomaly
+  (≤ 15 min) raises machine status to Warning ("Open ML anomaly — not a confirmed fault").
+- **Predictive API**: `GET /api/predictive`, `GET /api/predictive/{id}` (patterns from 24 h trends,
+  score + history, rule-based suggestions, data-quality warnings, alerts, maintenance, review label,
+  failure-prediction "not implemented"), `POST /api/predictive/{id}/score` (signed in), `GET /api/ml/status`.
+- **Domain**: `TrendAnalyzer`, `SuggestionRules` (documented in `docs/MAINTENANCE-RULES.md`), unit-tested.
+- **UI**: Predictive Maintenance page (machine list with anomaly flags, score card with plain-English
+  explanation, supporting charts, suggestions with rule IDs, data quality, the four-way distinction,
+  alerts, maintenance). Overview shows ML service status. Verified live: only HP-002 is anomalous
+  (largest deviation `VIB_mean`); PUMP-002 is not scored (missing flow data); CONV-003 skipped (offline).
+
+### Known limitations (M6)
+
+- Training data is a simple synthetic noise model; thresholds would need re-calibration on real data.
+- Scores are stored every 5 minutes for 14 machines (~4k rows/day); no retention policy yet.
+
 ## Next
 
-Milestone 6 — ML service (Isolation Forest, evaluation doc, tests) + Predictive Maintenance page.
+Milestone 7 — Reports (factory health, machine anomalies, maintenance history, site inspection) + PDF.

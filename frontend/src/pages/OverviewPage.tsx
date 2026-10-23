@@ -82,11 +82,12 @@ export default function OverviewPage() {
               <ConfigRow label="Database" ok={f ? health.data!.database === 'ok' : null} okText="Connected" offText="Unavailable" />
               <ConfigRow label="AI assistant" ok={f ? f.ai : null} okText="Configured" offText="AI NOT CONFIGURED" />
               <ConfigRow label="Knowledge search" ok={f ? f.embeddings : null} okText="Embeddings" offText="Keyword only" />
+              <ConfigRow label="ML service" ok={f ? health.data!.ml.available : null} okText="Reachable" offText={health.data?.ml.lastCheckedUtc ? 'ML service unavailable' : 'Not checked yet'} />
               <ConfigRow label="Dev users" ok={f ? f.devUsers : null} okText="DEV ONLY users on" offText="None" />
             </ul>
           )}
           <p className="border-t border-slate-800 px-3 py-2 text-[11px] text-slate-500">
-            ML service and tile model status appear here once those modules are built.
+            Tile model status appears here once tile inspection is built.
           </p>
         </Panel>
       </div>

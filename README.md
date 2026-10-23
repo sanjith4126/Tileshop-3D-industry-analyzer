@@ -88,6 +88,20 @@ cd frontend; npm test
 cd ml-service; .venv\Scripts\python -m pytest
 ```
 
+## ML service
+
+Models (one Isolation Forest per machine type) train automatically on synthetic data at first start
+(a few seconds) and are stored in `ml-service/models/`. Manual commands:
+
+```powershell
+cd ml-service
+.venv\Scripts\python -m app.train      # retrain
+.venv\Scripts\python -m app.evaluate   # evaluate on synthetic data -> docs/ML-EVALUATION.md
+```
+
+The API scores every machine every 5 minutes. If the ML service is down, the UI says
+"ML service unavailable" and shows no score. Evaluation numbers are on synthetic data only.
+
 ## Repository layout
 
 ```

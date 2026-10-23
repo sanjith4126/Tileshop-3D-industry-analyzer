@@ -68,7 +68,14 @@ export interface Health {
   database: 'ok' | 'unavailable'
   demoData: { seedBatchId: string; anchorUtc: string; seededUtc: string } | null
   features: { ai: boolean; embeddings: boolean; mlServiceUrl: string; devUsers: boolean }
+  ml: MlStatus
   timestampUtc: string
+}
+
+export interface MlStatus {
+  available: boolean
+  message: string
+  lastCheckedUtc: string | null
 }
 
 export type AlertSeverity = 'Warning' | 'Critical'
@@ -178,4 +185,38 @@ export interface InspectionSummary {
   lines: string[]
   focusEntityIds: string[]
   containsSyntheticData: boolean
+}
+
+export interface AnomalyScore {
+  score: number
+  threshold: number
+  maxFeatureZ: number | null
+  zThreshold: number | null
+  isAnomaly: boolean
+  modelVersion: string
+  timestampUtc: string
+  topDeviations: { feature: string; value: number; zScore: number }[]
+  isFresh: boolean
+}
+
+export interface PredictiveListItem {
+  machineId: string
+  name: string
+  status: MachineStatus
+  latestScore: AnomalyScore | null
+}
+
+export interface Predictive {
+  machine: MachineSummary
+  ml: MlStatus
+  latestScore: AnomalyScore | null
+  scoreHistory: AnomalyScore[]
+  trends: { sensorId: string; measurement: string; unit: string; state: SensorState; trend: { slopePerHour: number; changePercent: number; notable: boolean; direction: string } | null; firstHourAvg: number | null; lastHourAvg: number | null }[]
+  patternsObserved: string[]
+  suggestedActions: { ruleId: string; action: string; trigger: string }[]
+  dataQualityWarnings: string[]
+  openAlerts: Alert[]
+  maintenanceHistory: MaintenanceRecord[]
+  reviewLabel: string
+  failurePrediction: string
 }

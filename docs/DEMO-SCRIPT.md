@@ -27,12 +27,20 @@ Glazing & Inspection zone has open Critical/High observations with corrective-ac
 6. Back on the zone, click **Generate inspection summary**: a deterministic summary citing record
    codes (e.g. `OBS-xxxxxx`), with **Show … in 3D** buttons.
 
-## Scenario B — Machine anomaly (partially available; ML and reports come in Milestones 6–7)
+## Scenario B — Machine anomaly
 
-1. **Overview** shows MACHINE-HP-002 as Critical under "Machines needing attention".
-2. Click **Show in 3D** → camera flies to HP-002; side panel shows readings and maintenance.
-3. Click **Open machine details** → vibration and oil-temperature charts with warning/critical
-   limit lines (switch 1 h / 24 h / 7 d); threshold alerts listed with acknowledge/resolve.
+1. **Overview** shows MACHINE-HP-002 as Critical under "Machines needing attention" (reasons:
+   vibration beyond critical, oil temperature beyond warning, open ML anomaly).
+2. Click **Show in 3D** → the camera flies to HP-002; the side panel shows readings, open alerts and maintenance.
+3. Click **Open machine details** → vibration and oil-temperature charts with warning/critical limit
+   lines (switch 1 h / 24 h / 7 d); threshold alerts listed (sign in to acknowledge).
+4. Click **Predictive maintenance →** → pattern observed (rising vibration and temperature), the ML
+   anomaly score with plain-English explanation (largest deviation `VIB_mean`), suggested inspection
+   actions with rule IDs, data-quality warnings and the label
+   "Suggestion — requires review by a qualified engineer."
+   - ML scores refresh every 5 minutes; signed-in users can press **Score now**.
+   - Stop the ML service to show the honest "ML service unavailable — no anomaly score" state.
+5. Maintenance-prioritisation workflow and PDF report: Milestones 7–8.
 
 ## Scenario C — Tile quality (Milestone 9)
 

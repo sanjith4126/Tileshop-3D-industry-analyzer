@@ -10,7 +10,7 @@ using TileTwin.Infrastructure.Data;
 namespace TileTwin.Api.Controllers;
 
 [ApiController, Route("api/health")]
-public class HealthController(TileTwinDbContext db, AppConfig config, IWebHostEnvironment env) : ControllerBase
+public class HealthController(TileTwinDbContext db, AppConfig config, IWebHostEnvironment env, MlStatus ml) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> Get(CancellationToken ct)
@@ -26,6 +26,7 @@ public class HealthController(TileTwinDbContext db, AppConfig config, IWebHostEn
             database = dbOk ? "ok" : "unavailable",
             demoData = demo is null ? null : new { demo.SeedBatchId, demo.AnchorUtc, demo.SeededUtc },
             features = config.Features(env.IsDevelopment()),
+            ml = new { ml.Available, ml.Message, ml.LastCheckedUtc },
             timestampUtc = DateTime.UtcNow,
         });
     }

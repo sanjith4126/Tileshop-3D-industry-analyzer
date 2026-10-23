@@ -63,6 +63,7 @@ public class DemoSeeder(TileTwinDbContext db, ILogger<DemoSeeder> log)
     async Task DeleteDemoRowsAsync(CancellationToken ct)
     {
         await db.SensorReadings.Where(IsDemo<SensorReading>()).ExecuteDeleteAsync(ct);
+        await db.AnomalyScores.Where(IsDemo<AnomalyScore>()).ExecuteDeleteAsync(ct);
         await db.Alerts.Where(IsDemo<Alert>())
             .Where(a => !db.AlertAcknowledgements.Any(h => h.AlertId == a.Id)).ExecuteDeleteAsync(ct);
         await db.CorrectiveActions.Where(IsDemo<CorrectiveAction>()).ExecuteDeleteAsync(ct);

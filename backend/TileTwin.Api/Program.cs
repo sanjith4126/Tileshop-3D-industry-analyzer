@@ -49,6 +49,16 @@ builder.Services.AddScoped<DemoSeeder>();
 builder.Services.AddScoped<IdentitySeeder>();
 builder.Services.AddScoped<AlertService>();
 builder.Services.AddScoped<InspectionService>();
+builder.Services.AddScoped<PredictiveService>();
+builder.Services.AddScoped<AnomalyScoringService>();
+builder.Services.AddSingleton<MlStatus>();
+builder.Services.AddHttpClient<MlClient>(c =>
+{
+    c.BaseAddress = new Uri(config.MlServiceUrl);
+    c.Timeout = TimeSpan.FromSeconds(10);
+});
+if (builder.Configuration.GetValue("Ml:ScheduledScoring", true))
+    builder.Services.AddHostedService<AnomalyHostedService>();
 builder.Services.AddScoped<ReadingsService>();
 builder.Services.AddScoped<SimulationEngine>();
 if (builder.Configuration.GetValue("Simulator:Enabled", true))

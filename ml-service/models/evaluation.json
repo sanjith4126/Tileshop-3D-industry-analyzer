@@ -1,0 +1,152 @@
+{
+  "TYPE-HYDRAULIC-PRESS": {
+    "machineType": "TYPE-HYDRAULIC-PRESS",
+    "modelVersion": "iforest-1.1",
+    "threshold": 0.5297,
+    "precision": 0.988,
+    "recall": 0.923,
+    "falsePositiveRate": 0.013,
+    "recallByKind": {
+      "level_shift": 1.0,
+      "drift": 1.0,
+      "spike": 1.0,
+      "stuck": 1.0,
+      "noise_burst": 1.0,
+      "small_shift": 0.54
+    },
+    "isolationForestOnly": {
+      "recallByKind": {
+        "level_shift": 0.05,
+        "drift": 0.815,
+        "spike": 0.465,
+        "stuck": 0.13,
+        "noise_burst": 0.39,
+        "small_shift": 0.03
+      },
+      "falsePositiveRate": 0.007
+    },
+    "zThreshold": 3.52,
+    "normalWindows": 1000,
+    "anomalousWindows": 1200
+  },
+  "TYPE-PUMP": {
+    "machineType": "TYPE-PUMP",
+    "modelVersion": "iforest-1.1",
+    "threshold": 0.5387,
+    "precision": 0.995,
+    "recall": 0.919,
+    "falsePositiveRate": 0.005,
+    "recallByKind": {
+      "level_shift": 1.0,
+      "drift": 1.0,
+      "spike": 1.0,
+      "stuck": 1.0,
+      "noise_burst": 1.0,
+      "small_shift": 0.515
+    },
+    "isolationForestOnly": {
+      "recallByKind": {
+        "level_shift": 0.04,
+        "drift": 0.72,
+        "spike": 0.425,
+        "stuck": 0.06,
+        "noise_burst": 0.345,
+        "small_shift": 0.015
+      },
+      "falsePositiveRate": 0.001
+    },
+    "zThreshold": 3.66,
+    "normalWindows": 1000,
+    "anomalousWindows": 1200
+  },
+  "TYPE-MOTOR": {
+    "machineType": "TYPE-MOTOR",
+    "modelVersion": "iforest-1.1",
+    "threshold": 0.5512,
+    "precision": 0.992,
+    "recall": 0.926,
+    "falsePositiveRate": 0.009,
+    "recallByKind": {
+      "level_shift": 1.0,
+      "drift": 1.0,
+      "spike": 1.0,
+      "stuck": 1.0,
+      "noise_burst": 1.0,
+      "small_shift": 0.555
+    },
+    "isolationForestOnly": {
+      "recallByKind": {
+        "level_shift": 0.06,
+        "drift": 0.98,
+        "spike": 0.56,
+        "stuck": 0.17,
+        "noise_burst": 0.57,
+        "small_shift": 0.035
+      },
+      "falsePositiveRate": 0.005
+    },
+    "zThreshold": 3.41,
+    "normalWindows": 1000,
+    "anomalousWindows": 1200
+  },
+  "TYPE-CONVEYOR": {
+    "machineType": "TYPE-CONVEYOR",
+    "modelVersion": "iforest-1.1",
+    "threshold": 0.5857,
+    "precision": 0.994,
+    "recall": 0.887,
+    "falsePositiveRate": 0.006,
+    "recallByKind": {
+      "level_shift": 1.0,
+      "drift": 1.0,
+      "spike": 1.0,
+      "stuck": 1.0,
+      "noise_burst": 1.0,
+      "small_shift": 0.325
+    },
+    "isolationForestOnly": {
+      "recallByKind": {
+        "level_shift": 0.045,
+        "drift": 0.98,
+        "spike": 0.505,
+        "stuck": 0.095,
+        "noise_burst": 0.5,
+        "small_shift": 0.035
+      },
+      "falsePositiveRate": 0.001
+    },
+    "zThreshold": 3.2,
+    "normalWindows": 1000,
+    "anomalousWindows": 1200
+  },
+  "TYPE-INSPECTION-STATION": {
+    "machineType": "TYPE-INSPECTION-STATION",
+    "modelVersion": "iforest-1.1",
+    "threshold": 0.5776,
+    "precision": 0.991,
+    "recall": 0.951,
+    "falsePositiveRate": 0.01,
+    "recallByKind": {
+      "level_shift": 1.0,
+      "drift": 1.0,
+      "spike": 1.0,
+      "stuck": 1.0,
+      "noise_burst": 1.0,
+      "small_shift": 0.705
+    },
+    "isolationForestOnly": {
+      "recallByKind": {
+        "level_shift": 0.105,
+        "drift": 1.0,
+        "spike": 0.77,
+        "stuck": 0.23,
+        "noise_burst": 0.665,
+        "small_shift": 0.075
+      },
+      "falsePositiveRate": 0.007
+    },
+    "zThreshold": 3.33,
+    "normalWindows": 1000,
+    "anomalousWindows": 1200
+  }
+}
