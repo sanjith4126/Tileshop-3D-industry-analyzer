@@ -21,7 +21,7 @@ var config = AppConfig.Load(builder.Configuration);
 
 builder.Services.AddSingleton(config);
 builder.Services.AddSingleton(TimeProvider.System);
-builder.Services.AddDbContext<TileTwinDbContext>(o => o.UseNpgsql(config.ConnectionString));
+builder.Services.AddDbContext<TileTwinDbContext>(o => o.UseNpgsql(config.ConnectionString, x => x.UseVector()));
 
 builder.Services.AddIdentityCore<AppUser>(o =>
     {
@@ -68,6 +68,9 @@ builder.Services.AddHttpClient("ml", c =>
 builder.Services.AddSingleton(new AppStorage(builder.Configuration["UPLOADS_PATH"] is { Length: > 0 } up
     ? up : Path.Combine(builder.Environment.ContentRootPath, "App_Data", "uploads")));
 builder.Services.AddScoped<TileInspectionService>();
+// No embedding provider ships with the demo: knowledge search uses PostgreSQL full-text search.
+builder.Services.AddSingleton<IEmbeddingProvider, NotConfiguredEmbeddingProvider>();
+builder.Services.AddScoped<KnowledgeService>();
 builder.Services.AddScoped<WorkflowRunner>();
 
 // Rate limits on expensive endpoints (per signed-in user, else per IP).

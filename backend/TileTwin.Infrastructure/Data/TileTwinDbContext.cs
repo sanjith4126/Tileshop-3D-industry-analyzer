@@ -43,6 +43,8 @@ public class TileTwinDbContext(DbContextOptions<TileTwinDbContext> options) : Id
     public DbSet<Report> Reports => Set<Report>();
     public DbSet<WorkflowExecution> WorkflowExecutions => Set<WorkflowExecution>();
     public DbSet<TileInspection> TileInspections => Set<TileInspection>();
+    public DbSet<Document> Documents => Set<Document>();
+    public DbSet<DocumentChunk> DocumentChunks => Set<DocumentChunk>();
     public DbSet<DemoState> DemoState => Set<DemoState>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
@@ -100,6 +102,18 @@ public class TileTwinDbContext(DbContextOptions<TileTwinDbContext> options) : Id
         b.Entity<Report>().HasIndex(r => r.GeneratedUtc);
         b.Entity<WorkflowExecution>().HasIndex(w => w.StartedUtc);
         b.Entity<TileInspection>().HasIndex(t => t.UploadedUtc);
+        b.HasPostgresExtension("vector");
+        b.Entity<DocumentChunk>(e =>
+        {
+            e.HasOne<Document>().WithMany().HasForeignKey(c => c.DocumentId);
+            e.HasIndex(c => new { c.DocumentId, c.Index }).IsUnique();
+            // Full-text search column maintained by PostgreSQL.
+            e.Property<NpgsqlTypes.NpgsqlTsVector>("SearchVector")
+                .HasComputedColumnSql("""to_tsvector('english', "Text")""", stored: true);
+            e.HasIndex("SearchVector").HasMethod("GIN");
+            // Optional semantic embedding (pgvector), unbounded dimension so any provider fits.
+            e.Property<Pgvector.Vector?>("Embedding").HasColumnType("vector");
+        });
         b.Entity<AnomalyScore>(e =>
         {
             e.HasOne<Machine>().WithMany().HasForeignKey(a => a.MachineId);

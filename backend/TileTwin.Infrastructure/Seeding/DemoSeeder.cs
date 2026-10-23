@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using TileTwin.Domain;
 using TileTwin.Domain.Alerts;
 using TileTwin.Domain.Entities;
+using TileTwin.Domain.Knowledge;
 using TileTwin.Infrastructure.Data;
 using TileTwin.Infrastructure.Simulation;
 using static TileTwin.Infrastructure.Seeding.DemoPlant;
@@ -43,6 +44,7 @@ public class DemoSeeder(TileTwinDbContext db, ILogger<DemoSeeder> log)
         var (attachments, events) = DemoRecords.BuildObservationExtras(observations);
         await AddMissingAsync(db.ObservationAttachments, attachments, x => x.Id, ct);
         await AddMissingAsync(db.ObservationEvents, events, x => x.Id, ct);
+        SeedDocuments(anchor);
         await AddMissingAsync(db.MaintenanceRecords, DemoRecords.BuildMaintenance(anchor), x => x.Id, ct);
         await AddMissingAsync(db.ProductionBatches, DemoRecords.BuildBatches(anchor, rng), x => x.Id, ct);
 
@@ -60,9 +62,29 @@ public class DemoSeeder(TileTwinDbContext db, ILogger<DemoSeeder> log)
             SeedBatchId, anchor, readings, (DateTime.UtcNow - started).TotalSeconds);
     }
 
+    void SeedDocuments(DateTime anchor)
+    {
+        foreach (var d in DemoDocuments.All)
+        {
+            var text = d.Text; // raw string literals already strip the indentation
+            var id = DemoRecords.StableGuid($"doc:{d.Key}");
+            var chunks = TextChunker.Chunk(text);
+            db.Documents.Add(DemoRecords.Tag(new Document
+            {
+                Id = id, Title = d.Title, FileName = d.FileName, ContentType = "text/markdown", SizeBytes = text.Length,
+                UploadedBy = "seed (demo)", UploadedUtc = anchor.AddDays(-20), Status = DocumentStatus.Indexed, ExtractedText = text,
+                ChunkCount = chunks.Count, IndexedUtc = anchor.AddDays(-20),
+            }));
+            db.DocumentChunks.AddRange(chunks.Select((c, i) => DemoRecords.Tag(new DocumentChunk
+                { Id = DemoRecords.StableGuid($"doc:{d.Key}:{i}"), DocumentId = id, Index = i, Text = c })));
+        }
+    }
+
     async Task DeleteDemoRowsAsync(CancellationToken ct)
     {
         await db.SensorReadings.Where(IsDemo<SensorReading>()).ExecuteDeleteAsync(ct);
+        await db.DocumentChunks.Where(IsDemo<DocumentChunk>()).ExecuteDeleteAsync(ct);
+        await db.Documents.Where(IsDemo<Document>()).ExecuteDeleteAsync(ct);
         await db.AnomalyScores.Where(IsDemo<AnomalyScore>()).ExecuteDeleteAsync(ct);
         await db.Alerts.Where(IsDemo<Alert>())
             .Where(a => !db.AlertAcknowledgements.Any(h => h.AlertId == a.Id)).ExecuteDeleteAsync(ct);

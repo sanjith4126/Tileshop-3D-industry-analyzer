@@ -2,7 +2,7 @@
 
 ## Current state
 
-**Milestones 1–9 DONE (2026-10-23).** Core demo + tile inspection complete. Next: Milestone 10 (Knowledge Centre).
+**Milestones 1–10 DONE (2026-10-23).** Next: Milestone 11 (Overview polish + Administration).
 
 ## Environment (2026-10-22, Windows 11)
 
@@ -20,8 +20,8 @@ Ports: Postgres 5434, API 5080, ML 8001, frontend 5180 (5173 is taken by another
 
 | Suite | Command | Result |
 |---|---|---|
-| Backend (xUnit, real Postgres `tiletwin_test`) | `dotnet test backend/TileTwin.slnx` | 68 passed, 0 failed (~80 s, mostly re-seeding 494k readings) |
-| Frontend (Vitest) | `npm test` | 14 passed; `npm run build` OK |
+| Backend (xUnit, real Postgres `tiletwin_test`) | `dotnet test backend/TileTwin.slnx` | 75 passed, 0 failed (~2 min, mostly re-seeding 494k readings) |
+| Frontend (Vitest) | `npm test` | 15 passed; `npm run build` OK |
 | ML (pytest) | `.venv\Scripts\python -m pytest` | 16 passed (1 harmless Starlette/httpx deprecation warning) |
 
 ## Milestone 1 — environment + skeleton ✅
@@ -233,6 +233,28 @@ health checks; `.env.example`; README.
   and the MVTec AD non-commercial licence.
 - Verified live: uploading `sample-crack.png` through the API → stored, outcome ModelNotConfigured.
 
+## Milestone 10 — Knowledge Centre ✅
+
+- Tables `Documents` (keeps extracted text for re-indexing) and `DocumentChunks` with a generated
+  `tsvector` column + GIN index and a nullable pgvector `Embedding` column (migration `Knowledge`).
+- Upload `POST /api/documents` (Inspector/Engineer/Admin, ≤ 10 MB, rate-limited): PDF detected by
+  `%PDF-` magic and extracted with PdfPig; TXT/MD accepted only as strict UTF-8 without NUL bytes.
+  `TextChunker` (paragraph-based, ≤ 1000 chars, unit-tested). Re-index, delete (Engineer/Admin), list
+  with per-document status, audit-logged.
+- Search `GET /api/documents/search`: **keyword search (embeddings not configured)** via
+  `websearch_to_tsquery` + `ts_rank` + `ts_headline` with source attribution (document title, passage).
+  `IEmbeddingProvider` integration point: with a provider, chunks are embedded and search switches to
+  pgvector cosine distance (tested with a deterministic fake provider). No provider ships, so the demo
+  uses keyword search and says so.
+- Two short synthetic demo documents are seeded (press vibration check, glaze line safety rules).
+- The assistant's `search_documents` tool now searches the Knowledge Centre (top 5 passages, marked untrusted).
+- UI: Knowledge Centre page (search with highlighted passages and sources, upload, status, re-index, delete).
+
+### Known limitations (M10)
+
+- No embedding provider implementation; `EMBEDDINGS__Provider` alone logs a warning and keeps keyword search.
+- Scanned PDFs (images only) yield no text — OCR is out of scope.
+
 ## Next
 
-Milestone 10 — Knowledge Centre (upload PDF/TXT/MD, chunk, keyword search fallback, re-index).
+Milestone 11 — Overview polish, Administration (users, config status, simulator pause, reset demo data).

@@ -8,6 +8,7 @@ import ObservationDetailPage from './pages/inspection/ObservationDetailPage'
 import MachineDetailPage from './pages/monitoring/MachineDetailPage'
 import MonitoringPage from './pages/monitoring/MonitoringPage'
 import AssistantPage from './pages/assistant/AssistantPage'
+import KnowledgePage from './pages/knowledge/KnowledgePage'
 import PlaceholderPage from './pages/PlaceholderPage'
 import TileQualityPage from './pages/tiles/TileQualityPage'
 import PredictivePage from './pages/predictive/PredictivePage'
@@ -30,7 +31,7 @@ export default function App() {
         <Route path="tile-quality" element={<TileQualityPage />} />
         <Route path="predictive" element={<PredictivePage />} />
         <Route path="assistant" element={<AssistantPage />} />
-        <Route path="knowledge" element={<PlaceholderPage title="Knowledge Centre" milestone={10} />} />
+        <Route path="knowledge" element={<KnowledgePage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="reports/:id" element={<ReportViewPage />} />
         <Route path="admin" element={<PlaceholderPage title="Administration" milestone={11} />} />

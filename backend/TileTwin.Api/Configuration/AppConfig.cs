@@ -18,7 +18,7 @@ public sealed class AppConfig
 
     public FeatureStatus Features(bool isDevelopment) => new(
         Ai: !string.IsNullOrWhiteSpace(AnthropicApiKey) && !string.IsNullOrWhiteSpace(LlmModel),
-        Embeddings: !string.IsNullOrWhiteSpace(EmbeddingsProvider),
+        Embeddings: false, // no IEmbeddingProvider implementation ships; EMBEDDINGS__Provider alone does not enable it
         MlServiceUrl: MlServiceUrl,
         DevUsers: isDevelopment && !string.IsNullOrWhiteSpace(DevSeedUserPassword));
 
@@ -51,6 +51,8 @@ public sealed class AppConfig
     {
         var f = Features(isDevelopment);
         if (!f.Ai) log.LogWarning("AI assistant DISABLED: ANTHROPIC_API_KEY and/or LLM__Model not set (UI shows AI NOT CONFIGURED)");
+        if (!string.IsNullOrWhiteSpace(EmbeddingsProvider))
+            log.LogWarning("EMBEDDINGS__Provider '{Provider}' is set but no embedding provider is implemented; using keyword search", EmbeddingsProvider);
         if (!f.Embeddings) log.LogWarning("Embeddings DISABLED: knowledge search uses PostgreSQL keyword search");
         if (!f.DevUsers) log.LogInformation("Dev seed users not created (needs Development + DEV_SEED_USER_PASSWORD)");
         log.LogInformation("ML service URL: {Url}", f.MlServiceUrl);
