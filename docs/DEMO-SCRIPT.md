@@ -45,7 +45,17 @@ Glazing & Inspection zone has open Critical/High observations with corrective-ac
    workflow": HP-002 ranks first (Immediate band) with every score point explained, PUMP-002 follows
    (missing data), CONV-003 is listed as excluded (offline). Click **Download PDF report**.
 
-## Scenario C — Tile quality (Milestone 9)
+## Scenario C — Tile quality
+
+1. Open **Tile Quality Inspection**. The header badge shows **MODEL NOT CONFIGURED** (no model ships with the demo).
+2. Sign in as `dev.inspector@tiletwin.local`, choose a JPEG/PNG (e.g. `frontend/public/tile-samples/sample-crack.png`),
+   see the preview, **Submit for inspection** → the image is stored and the result says
+   **MODEL NOT CONFIGURED** (no invented label). It appears in History.
+3. Tick **Sample demo mode** → three bundled synthetic images with documented labels, each marked
+   **SAMPLE RESULT — not a model prediction**.
+4. With a real model (`TILE_MODEL_PATH`, see `docs/TILE-MODEL.md`) the same upload returns label,
+   confidence and per-class probabilities.
+
 
 ## Scenario D — AI assistant
 

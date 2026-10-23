@@ -2,7 +2,7 @@
 
 ## Current state
 
-**Milestones 1–8 DONE (2026-10-23).** Core demo complete. Next: Milestone 9 (Tile Quality Inspection).
+**Milestones 1–9 DONE (2026-10-23).** Core demo + tile inspection complete. Next: Milestone 10 (Knowledge Centre).
 
 ## Environment (2026-10-22, Windows 11)
 
@@ -20,9 +20,9 @@ Ports: Postgres 5434, API 5080, ML 8001, frontend 5180 (5173 is taken by another
 
 | Suite | Command | Result |
 |---|---|---|
-| Backend (xUnit, real Postgres `tiletwin_test`) | `dotnet test backend/TileTwin.slnx` | 64 passed, 0 failed (~70 s, mostly re-seeding 494k readings) |
-| Frontend (Vitest) | `npm test` | 12 passed; `npm run build` OK |
-| ML (pytest) | `.venv\Scripts\python -m pytest` | 11 passed (1 harmless Starlette/httpx deprecation warning) |
+| Backend (xUnit, real Postgres `tiletwin_test`) | `dotnet test backend/TileTwin.slnx` | 68 passed, 0 failed (~80 s, mostly re-seeding 494k readings) |
+| Frontend (Vitest) | `npm test` | 14 passed; `npm run build` OK |
+| ML (pytest) | `.venv\Scripts\python -m pytest` | 16 passed (1 harmless Starlette/httpx deprecation warning) |
 
 ## Milestone 1 — environment + skeleton ✅
 
@@ -217,6 +217,22 @@ health checks; `.env.example`; README.
   Anthropic provider compiles against SDK 13.1. Set a key to run Scenario D.
 - Conversation history is stateless (the client resends up to 20 turns); no streaming responses.
 
+## Milestone 9 — Tile Quality Inspection ✅
+
+- ML service: `app/tile.py` loads any ONNX classifier from `TILE_MODEL_PATH` + `labels.json` +
+  `model-card.json` (ONNX Runtime CPU). `GET /tile/status`, `POST /tile/classify` (503 **MODEL NOT
+  CONFIGURED** when absent/corrupt). Tests build a tiny ONNX model to exercise the real inference path.
+- Backend: `TileInspections` table (migration `TileInspections`), upload `POST /api/tile-inspections`
+  (Inspector/Engineer/Admin, rate-limited, ≤ 10 MB, type detected from magic bytes — not the name or
+  claimed content type — file name sanitised, stored under `App_Data/uploads/tiles` or `UPLOADS_PATH`),
+  outcome Classified / ModelNotConfigured / MlUnavailable / Failed (never an invented label), history,
+  image and status endpoints; audit-logged.
+- UI: status badge, upload with client-side checks and preview, result card, history, **Sample demo
+  mode** with three generated synthetic images (`ml-service/scripts/make_tile_samples.py`) labelled
+  "SAMPLE RESULT — not a model prediction". `docs/TILE-MODEL.md` explains how to train/export a model
+  and the MVTec AD non-commercial licence.
+- Verified live: uploading `sample-crack.png` through the API → stored, outcome ModelNotConfigured.
+
 ## Next
 
-Milestone 9 — Tile Quality Inspection (upload, MODEL NOT CONFIGURED, sample mode).
+Milestone 10 — Knowledge Centre (upload PDF/TXT/MD, chunk, keyword search fallback, re-index).

@@ -911,6 +911,71 @@ namespace TileTwin.Infrastructure.Data.Migrations
                     b.ToTable("Sites");
                 });
 
+            modelBuilder.Entity("TileTwin.Domain.Entities.TileInspection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<double?>("Confidence")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DataOrigin")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Label")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Message")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ModelName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ModelVersion")
+                        .HasColumnType("text");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("ProbabilitiesJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SeedBatchId")
+                        .HasColumnType("text");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StoredFileName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("UploadedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UploadedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UploadedUtc");
+
+                    b.ToTable("TileInspections");
+                });
+
             modelBuilder.Entity("TileTwin.Domain.Entities.WorkflowExecution", b =>
                 {
                     b.Property<Guid>("Id")

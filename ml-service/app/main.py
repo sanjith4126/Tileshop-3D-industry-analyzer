@@ -10,21 +10,25 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 import numpy as np
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
 from . import model as m
+from . import tile
 from .synthetic import SPECS, WINDOW_MINUTES
 
 MIN_POINTS = 45  # of 60 one-minute samples; fewer = data-quality problem, no score
 
 MODELS: dict[str, m.TrainedModel] = {}
+TILE: dict = {"model": None, "status": tile.NOT_CONFIGURED}
+MAX_IMAGE_BYTES = 10 * 1024 * 1024
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     # Models train on synthetic data in seconds, so the demo works out of the box without a train step.
     MODELS.update(m.load_all() or m.train_all())
+    TILE["model"], TILE["status"] = tile.load_from_env()
     yield
 
 
@@ -45,6 +49,7 @@ class TrainRequest(BaseModel):
 def health() -> dict:
     return {
         "status": "ok", "service": "tiletwin-ml", "modelsLoaded": sorted(MODELS),
+        "tileModel": {"configured": TILE["model"] is not None, "status": TILE["status"]},
         "timestampUtc": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -91,3 +96,25 @@ def predict(req: PredictRequest) -> dict:
         "featuresUsed": model.features, "topDeviations": model.top_deviations(x),
         "timestampUtc": datetime.now(timezone.utc).isoformat(), "dataOrigin": "Synthetic",
     }
+
+
+@app.get("/tile/status")
+def tile_status() -> dict:
+    model = TILE["model"]
+    return {"configured": model is not None, "status": TILE["status"],
+            "labels": model.labels if model else None, "modelCard": model.card if model else None}
+
+
+@app.post("/tile/classify")
+async def tile_classify(file: UploadFile = File(...)) -> dict:
+    model = TILE["model"]
+    if model is None:
+        raise HTTPException(503, {"configured": False, "error": TILE["status"]})
+    data = await file.read(MAX_IMAGE_BYTES + 1)
+    if len(data) > MAX_IMAGE_BYTES:
+        raise HTTPException(413, "Image larger than 10 MB")
+    try:
+        result = model.classify(data)
+    except Exception as e:
+        raise HTTPException(422, f"Could not classify image: {type(e).__name__}") from e
+    return {"configured": True, **result, "timestampUtc": datetime.now(timezone.utc).isoformat()}

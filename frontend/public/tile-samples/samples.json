@@ -1,0 +1,29 @@
+[
+  {
+    "id": "clean",
+    "image": "/tile-samples/sample-clean.png",
+    "title": "Clean tile",
+    "documentedResult": {
+      "label": "ok",
+      "note": "No crack or glaze defect is drawn in this synthetic image."
+    }
+  },
+  {
+    "id": "crack",
+    "image": "/tile-samples/sample-crack.png",
+    "title": "Hairline crack",
+    "documentedResult": {
+      "label": "crack",
+      "note": "A diagonal hairline crack was drawn deliberately."
+    }
+  },
+  {
+    "id": "glaze",
+    "image": "/tile-samples/sample-glaze.png",
+    "title": "Glaze pinholes",
+    "documentedResult": {
+      "label": "glaze_defect",
+      "note": "Clusters of pinholes and a crawled patch were drawn deliberately."
+    }
+  }
+]

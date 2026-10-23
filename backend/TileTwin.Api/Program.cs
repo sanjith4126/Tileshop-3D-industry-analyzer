@@ -60,6 +60,14 @@ builder.Services.AddSingleton<ILlmProvider>(new AnthropicLlmProvider(config.Anth
 builder.Services.AddScoped<AssistantTools>();
 builder.Services.AddScoped<AssistantService>();
 builder.Services.AddScoped<IWorkflow, MaintenancePrioritisationWorkflow>();
+builder.Services.AddHttpClient("ml", c =>
+{
+    c.BaseAddress = new Uri(config.MlServiceUrl);
+    c.Timeout = TimeSpan.FromSeconds(30);
+});
+builder.Services.AddSingleton(new AppStorage(builder.Configuration["UPLOADS_PATH"] is { Length: > 0 } up
+    ? up : Path.Combine(builder.Environment.ContentRootPath, "App_Data", "uploads")));
+builder.Services.AddScoped<TileInspectionService>();
 builder.Services.AddScoped<WorkflowRunner>();
 
 // Rate limits on expensive endpoints (per signed-in user, else per IP).

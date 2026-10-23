@@ -26,3 +26,6 @@ ml-service/models/*.joblib
 
 .idea/
 .DS_Store
+
+# Uploaded files
+App_Data/
