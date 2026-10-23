@@ -19,6 +19,7 @@ export interface MachineSummary {
   model: string
   dataOrigin: DataOrigin
   lastReadingUtc: string | null
+  openAlertCount: number
 }
 
 export interface Sensor {
@@ -68,4 +69,61 @@ export interface Health {
   demoData: { seedBatchId: string; anchorUtc: string; seededUtc: string } | null
   features: { ai: boolean; embeddings: boolean; mlServiceUrl: string; devUsers: boolean }
   timestampUtc: string
+}
+
+export type AlertSeverity = 'Warning' | 'Critical'
+export type AlertStatus = 'Open' | 'Acknowledged' | 'Resolved'
+
+export interface AlertHistory {
+  newStatus: AlertStatus
+  userName: string
+  comment: string | null
+  timestampUtc: string
+}
+
+export interface Alert {
+  id: string
+  machineId: string
+  machineName: string
+  sensorId: string
+  measurement: string
+  unit: string
+  severity: AlertSeverity
+  observedValue: number
+  threshold: number
+  detectedUtc: string
+  status: AlertStatus
+  resolvedUtc: string | null
+  dataOrigin: DataOrigin
+  history: AlertHistory[]
+}
+
+export interface SeriesPoint {
+  t: string
+  avg: number
+  min: number
+  max: number
+}
+
+export interface SensorSeries {
+  sensorId: string
+  measurement: string
+  unit: string
+  warningMin: number | null
+  warningMax: number | null
+  criticalMin: number | null
+  criticalMax: number | null
+  points: SeriesPoint[]
+}
+
+export type ReadingsRange = '1h' | '24h' | '7d'
+
+export interface ReadingsResponse {
+  machineId: string
+  range: ReadingsRange
+  fromUtc: string
+  toUtc: string
+  bucketSeconds: number
+  dataOrigin: DataOrigin
+  sensors: SensorSeries[]
 }

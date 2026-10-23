@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from 'react-router'
+import { SignIn } from '../auth/SignIn'
 
 export const NAV = [
   { to: '/', label: 'Overview', icon: '◧' },
@@ -43,6 +44,7 @@ export function Layout() {
               </li>
             ))}
           </ul>
+          <SignIn />
           <p className="border-t border-slate-800 px-4 py-2 text-[10px] text-slate-600">Prototype · not security audited</p>
         </nav>
         <main className="min-w-0 flex-1 overflow-auto">

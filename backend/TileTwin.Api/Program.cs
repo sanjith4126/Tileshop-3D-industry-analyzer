@@ -9,6 +9,7 @@ using TileTwin.Api.Configuration;
 using TileTwin.Api.Services;
 using TileTwin.Infrastructure.Data;
 using TileTwin.Infrastructure.Seeding;
+using TileTwin.Infrastructure.Simulation;
 
 EnvFile.Load();
 var builder = WebApplication.CreateBuilder(args);
@@ -46,6 +47,11 @@ builder.Services.AddScoped<MachineService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<DemoSeeder>();
 builder.Services.AddScoped<IdentitySeeder>();
+builder.Services.AddScoped<AlertService>();
+builder.Services.AddScoped<ReadingsService>();
+builder.Services.AddScoped<SimulationEngine>();
+if (builder.Configuration.GetValue("Simulator:Enabled", true))
+    builder.Services.AddHostedService<SimulatorHostedService>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));

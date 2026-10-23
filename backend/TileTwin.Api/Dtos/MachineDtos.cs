@@ -13,7 +13,7 @@ public sealed record MachineSummaryDto(
     string Id, string Name, string TypeId, string TypeName, string ZoneId, string ZoneName,
     MachineStatus Status, IReadOnlyList<string> StatusReasons,
     MaintenanceStatus MaintenanceStatus, bool IsFlaggedOffline,
-    string Manufacturer, string Model, DataOrigin DataOrigin, DateTime? LastReadingUtc);
+    string Manufacturer, string Model, DataOrigin DataOrigin, DateTime? LastReadingUtc, int OpenAlertCount);
 
 public sealed record MaintenanceRecordDto(
     Guid Id, string MachineId, MaintenanceType Type, string Description, string? PerformedBy,

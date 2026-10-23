@@ -65,7 +65,7 @@ export default function OverviewPage() {
                   <StatusBadge status={m.status} />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm"><span className="font-mono text-xs text-slate-400">{m.id}</span> · {m.name}</p>
-                    <p className="truncate text-xs text-slate-400">{m.statusReasons.join('; ')}</p>
+                    <p className="truncate text-xs text-slate-400">{m.statusReasons.join('; ')}{m.openAlertCount > 0 && ` · ${m.openAlertCount} open alert(s)`}</p>
                   </div>
                   <button onClick={() => showIn3D(m.id)} className="rounded bg-slate-800 px-2 py-1 text-xs hover:bg-slate-700">Show in 3D</button>
                   <Link to={`/monitoring/${m.id}`} className="rounded bg-slate-800 px-2 py-1 text-xs hover:bg-slate-700">Details</Link>

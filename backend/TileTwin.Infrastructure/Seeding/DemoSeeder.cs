@@ -1,10 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Npgsql;
-using NpgsqlTypes;
 using TileTwin.Domain;
+using TileTwin.Domain.Alerts;
 using TileTwin.Domain.Entities;
 using TileTwin.Infrastructure.Data;
+using TileTwin.Infrastructure.Simulation;
 using static TileTwin.Infrastructure.Seeding.DemoPlant;
 
 namespace TileTwin.Infrastructure.Seeding;
@@ -60,6 +60,8 @@ public class DemoSeeder(TileTwinDbContext db, ILogger<DemoSeeder> log)
     async Task DeleteDemoRowsAsync(CancellationToken ct)
     {
         await db.SensorReadings.Where(IsDemo<SensorReading>()).ExecuteDeleteAsync(ct);
+        await db.Alerts.Where(IsDemo<Alert>())
+            .Where(a => !db.AlertAcknowledgements.Any(h => h.AlertId == a.Id)).ExecuteDeleteAsync(ct);
         await db.CorrectiveActions.Where(IsDemo<CorrectiveAction>()).ExecuteDeleteAsync(ct);
         await db.InspectionObservations.Where(IsDemo<InspectionObservation>())
             .Where(o => !db.CorrectiveActions.Any(a => a.ObservationId == o.Id)).ExecuteDeleteAsync(ct);
@@ -121,11 +123,23 @@ public class DemoSeeder(TileTwinDbContext db, ILogger<DemoSeeder> log)
 
     async Task<long> CopyReadingsAsync(DateTime anchor, Random rng, CancellationToken ct)
     {
-        var conn = (NpgsqlConnection)db.Database.GetDbConnection();
-        await using var writer = await conn.BeginBinaryImportAsync(
-            """COPY "SensorReadings" ("MachineId", "SensorId", "Value", "TimestampUtc", "DataOrigin", "SeedBatchId") FROM STDIN (FORMAT BINARY)""", ct);
+        var rows = GenerateHistory(anchor, rng).ToList();
+        var count = await ReadingWriter.CopyAsync(db, rows, ct);
 
-        long count = 0;
+        // Replay the threshold rules over the history so alerts exist with their real crossing times.
+        var limits = await db.SensorDefinitions.AsNoTracking()
+            .ToDictionaryAsync(s => s.Id, s => new SensorLimits(s.WarningMin, s.WarningMax, s.CriticalMin, s.CriticalMax), ct);
+        var open = await db.Alerts.Where(a => a.Status != AlertStatus.Resolved)
+            .Select(a => new { a.MachineId, a.SensorId, a.Severity }).ToListAsync(ct);
+        var alerts = ReadingWriter.DetectAlerts(rows, limits,
+            new AlertDetector(open.Select(a => (a.MachineId, a.SensorId, a.Severity))),
+            c => DemoRecords.StableGuid($"alert:{c.SensorId}:{c.Severity}"));
+        await AddMissingAsync(db.Alerts, alerts, a => a.Id, ct); // alerts kept because users acted on them keep their stable ID
+        return count;
+    }
+
+    static IEnumerable<ReadingRow> GenerateHistory(DateTime anchor, Random rng)
+    {
         foreach (var m in Machines)
             foreach (var s in m.Sensors)
             {
@@ -133,19 +147,9 @@ public class DemoSeeder(TileTwinDbContext db, ILogger<DemoSeeder> log)
                 for (var t = anchor - History; t <= anchor; t = t.AddMinutes(1))
                 {
                     var value = SignalModel.Value(m.Id, s, t, anchor, rng); // always draw, keeps the sequence stable
-                    if (!SignalModel.HasReading(m.Id, s.Suffix, t, anchor)) continue;
-                    await writer.StartRowAsync(ct);
-                    await writer.WriteAsync(m.Id, NpgsqlDbType.Text, ct);
-                    await writer.WriteAsync(sensorId, NpgsqlDbType.Text, ct);
-                    await writer.WriteAsync(value, NpgsqlDbType.Double, ct);
-                    await writer.WriteAsync(t, NpgsqlDbType.TimestampTz, ct);
-                    await writer.WriteAsync(nameof(DataOrigin.Synthetic), NpgsqlDbType.Varchar, ct);
-                    await writer.WriteAsync(SeedBatchId, NpgsqlDbType.Text, ct);
-                    count++;
+                    if (SignalModel.HasReading(m.Id, s.Suffix, t, anchor))
+                        yield return new ReadingRow(m.Id, sensorId, value, t);
                 }
             }
-
-        await writer.CompleteAsync(ct);
-        return count;
     }
 }

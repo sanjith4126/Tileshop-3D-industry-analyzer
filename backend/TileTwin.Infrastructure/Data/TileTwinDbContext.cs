@@ -17,6 +17,7 @@ public class DemoState
     public required string SeedBatchId { get; set; }
     public DateTime AnchorUtc { get; set; }
     public DateTime SeededUtc { get; set; }
+    public bool SimulatorPaused { get; set; }
 }
 
 public class TileTwinDbContext(DbContextOptions<TileTwinDbContext> options) : IdentityDbContext<AppUser>(options)
@@ -33,6 +34,8 @@ public class TileTwinDbContext(DbContextOptions<TileTwinDbContext> options) : Id
     public DbSet<MaintenanceRecord> MaintenanceRecords => Set<MaintenanceRecord>();
     public DbSet<ProductionBatch> ProductionBatches => Set<ProductionBatch>();
     public DbSet<AuditLogEntry> AuditLog => Set<AuditLogEntry>();
+    public DbSet<Alert> Alerts => Set<Alert>();
+    public DbSet<AlertAcknowledgement> AlertAcknowledgements => Set<AlertAcknowledgement>();
     public DbSet<DemoState> DemoState => Set<DemoState>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
@@ -77,6 +80,13 @@ public class TileTwinDbContext(DbContextOptions<TileTwinDbContext> options) : Id
             e.HasIndex(p => p.BatchCode).IsUnique();
         });
         b.Entity<AuditLogEntry>().ToTable("AuditLog").HasIndex(a => a.TimestampUtc);
+        b.Entity<Alert>(e =>
+        {
+            e.HasOne<Machine>().WithMany().HasForeignKey(a => a.MachineId);
+            e.HasOne<SensorDefinition>().WithMany().HasForeignKey(a => a.SensorId);
+            e.HasIndex(a => new { a.Status, a.MachineId });
+        });
+        b.Entity<AlertAcknowledgement>().HasOne<Alert>().WithMany(a => a.History).HasForeignKey(h => h.AlertId);
 
         // Restrict everywhere: deleting demo rows must never cascade into user-created rows.
         foreach (var fk in b.Model.GetEntityTypes().Where(t => t.ClrType.Namespace == typeof(Site).Namespace)

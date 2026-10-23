@@ -58,7 +58,7 @@ public class ZonesController(TileTwinDbContext db, MachineService machines) : Co
 }
 
 [ApiController, Route("api/machines")]
-public class MachinesController(MachineService machines) : ControllerBase
+public class MachinesController(MachineService machines, ReadingsService readings) : ControllerBase
 {
     [HttpGet]
     public async Task<List<MachineSummaryDto>> List([FromQuery] string? zoneId, [FromQuery] MachineStatus? status, CancellationToken ct)
@@ -70,6 +70,15 @@ public class MachinesController(MachineService machines) : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(string id, CancellationToken ct) =>
         await machines.GetAsync(id, ct) is { } m ? Ok(m) : NotFound();
+
+    /// <summary>Downsampled time series per sensor. range = 1h | 24h | 7d.</summary>
+    [HttpGet("{id}/readings")]
+    public async Task<IActionResult> Readings(string id, [FromQuery] string range = "24h", CancellationToken ct = default)
+    {
+        if (!ReadingsService.Ranges.ContainsKey(range))
+            return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]> { ["range"] = ["Use 1h, 24h or 7d"] }));
+        return await readings.GetAsync(id, range, ct) is { } r ? Ok(r) : NotFound();
+    }
 
     [HttpPut("{id}/state"), Authorize(Roles = $"{Roles.MaintenanceEngineer},{Roles.Admin}")]
     public async Task<IActionResult> UpdateState(string id, UpdateMachineStateRequest req, CancellationToken ct) =>

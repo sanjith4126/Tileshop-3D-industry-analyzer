@@ -27,6 +27,10 @@ public static class SignalModel
             _ => true,
         };
 
+    /// <summary>Live simulator: the PUMP-002 flow gap continues; offline machines are skipped via their flag.</summary>
+    public static bool HasLiveReading(string machineId, string suffix) =>
+        !(machineId == GapMachine && suffix == GapSensorSuffix);
+
     public static double Value(string machineId, DemoPlant.SensorSpec s, DateTime t, DateTime anchor, Random rng)
     {
         var v = s.Nominal + Gaussian(rng) * s.Noise;

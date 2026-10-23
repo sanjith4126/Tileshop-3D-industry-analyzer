@@ -47,6 +47,7 @@ export function MachinePanel({ id, onClose }: { id: string; onClose: () => void 
               <dt className="text-slate-500">Maintenance</dt><dd>{m.maintenanceStatus}</dd>
               <dt className="text-slate-500">Manufacturer</dt><dd>{m.manufacturer} · {m.model}</dd>
               <dt className="text-slate-500">Last reading</dt><dd>{formatUtc(m.lastReadingUtc)}</dd>
+              <dt className="text-slate-500">Open alerts</dt><dd className={m.openAlertCount ? 'font-semibold text-amber-300' : ''}>{m.openAlertCount || 'None'}</dd>
             </dl>
 
             <section>

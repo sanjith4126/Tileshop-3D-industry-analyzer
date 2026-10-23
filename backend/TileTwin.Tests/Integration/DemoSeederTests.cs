@@ -16,6 +16,7 @@ public class DemoSeederTests(ApiFactory factory)
         var db = factory.CreateDbContext(scope);
         var seeder = scope.ServiceProvider.GetRequiredService<DemoSeeder>();
 
+        await seeder.ResetAsync(DateTime.UtcNow); // known starting point (other tests add live readings)
         var observation = await db.InspectionObservations.OrderBy(o => o.Id).FirstAsync(o => o.DataOrigin == DataOrigin.Synthetic);
         var userAction = new CorrectiveAction
         {

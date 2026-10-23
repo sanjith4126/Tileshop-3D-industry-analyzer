@@ -16,6 +16,10 @@ public enum ObservationCategory { Safety, Housekeeping, Equipment, Quality, Envi
 
 public enum CorrectiveActionStatus { Planned, InProgress, Done, Cancelled }
 
+public enum AlertSeverity { Warning, Critical }
+
+public enum AlertStatus { Open, Acknowledged, Resolved }
+
 public static class Roles
 {
     public const string Viewer = "Viewer";

@@ -3,6 +3,8 @@ import { Route, Routes } from 'react-router'
 import { Layout } from './components/Layout'
 import { Loading } from './components/States'
 import OverviewPage from './pages/OverviewPage'
+import MachineDetailPage from './pages/monitoring/MachineDetailPage'
+import MonitoringPage from './pages/monitoring/MonitoringPage'
 import PlaceholderPage from './pages/PlaceholderPage'
 
 // three.js is large: load the twin only when visited.
@@ -15,7 +17,8 @@ export default function App() {
         <Route index element={<OverviewPage />} />
         <Route path="twin" element={<Suspense fallback={<Loading label="Loading 3D twin…" />}><TwinPage /></Suspense>} />
         <Route path="inspection/*" element={<PlaceholderPage title="Remote Site Inspection" milestone={5} />} />
-        <Route path="monitoring/*" element={<PlaceholderPage title="Machine Monitoring" milestone={4} />} />
+        <Route path="monitoring" element={<MonitoringPage />} />
+        <Route path="monitoring/:id" element={<MachineDetailPage />} />
         <Route path="tile-quality" element={<PlaceholderPage title="Tile Quality Inspection" milestone={9} />} />
         <Route path="predictive" element={<PlaceholderPage title="Predictive Maintenance" milestone={6} />} />
         <Route path="assistant" element={<PlaceholderPage title="AI Assistant" milestone={8} />} />

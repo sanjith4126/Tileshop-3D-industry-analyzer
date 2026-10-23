@@ -11,7 +11,7 @@ afterEach(() => vi.unstubAllGlobals())
 const machine = (id: string, status: MachineSummary['status'], reasons: string[] = []): MachineSummary => ({
   id, name: id, typeId: 'T', typeName: 'Type', zoneId: 'ZONE-PRESS-A', zoneName: 'Pressing', status,
   statusReasons: reasons, maintenanceStatus: 'InService', isFlaggedOffline: false, manufacturer: 'Unknown (demo)',
-  model: 'Unknown (demo)', dataOrigin: 'Synthetic', lastReadingUtc: null,
+  model: 'Unknown (demo)', dataOrigin: 'Synthetic', lastReadingUtc: null, openAlertCount: 0,
 })
 
 const health: Health = {

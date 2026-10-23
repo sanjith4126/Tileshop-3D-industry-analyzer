@@ -2,7 +2,7 @@
 
 ## Current state
 
-**Milestones 1–3 DONE (2026-10-22).** Next: Milestone 4 (simulator, charts, alerts).
+**Milestones 1–4 DONE (2026-10-23).** Next: Milestone 5 (Remote Site Inspection).
 
 ## Environment (2026-10-22, Windows 11)
 
@@ -20,8 +20,8 @@ Ports: Postgres 5434, API 5080, ML 8001, frontend 5180 (5173 is taken by another
 
 | Suite | Command | Result |
 |---|---|---|
-| Backend (xUnit, real Postgres `tiletwin_test`) | `dotnet test backend/TileTwin.slnx` | 23 passed, 0 failed (~51 s, mostly re-seeding 494k readings) |
-| Frontend (Vitest) | `npm test` | 5 passed; `npm run build` OK |
+| Backend (xUnit, real Postgres `tiletwin_test`) | `dotnet test backend/TileTwin.slnx` | 33 passed, 0 failed (~2 min, mostly re-seeding 494k readings) |
+| Frontend (Vitest) | `npm test` | 7 passed; `npm run build` OK |
 | ML (pytest) | `pytest` | 1 passed (M1) |
 
 ## Milestone 1 — environment + skeleton ✅
@@ -92,6 +92,31 @@ health checks; `.env.example`; README.
 - Status colours could only be checked as `Offline` in the browser, because the seeded data was
   already stale; the live simulator (M4) makes Normal/Warning/Critical/Unknown visible.
 
+## Milestone 4 — machine monitoring ✅
+
+- **Live simulator** (`SimulatorHostedService` → `SimulationEngine`): every 5 s writes one synthetic
+  reading per live sensor (continues the HP-002 drift; PUMP-002 flow gap persists; machines flagged
+  offline get none). On startup it backfills the downtime gap at 1-min resolution (max 7 days).
+  Pause/resume: `GET/PUT /api/admin/simulator` (Admin). Disabled in tests via `Simulator__Enabled=false`.
+- **Threshold alerts** (`AlertDetector`, domain, unit-tested): crossing a warning/critical limit opens an
+  alert (value, threshold, detected UTC); no duplicate for the same machine+sensor+severity while
+  Open/Acknowledged. Seed replays the history so HP-002 alerts carry their real crossing times
+  (vibration warning ≈ −10.5 h, oil temp warning ≈ −4 h, vibration critical ≈ −2.5 h).
+- **API**: `GET /api/alerts`, `POST /api/alerts/{id}/acknowledge` (Inspector/Engineer/Admin),
+  `POST /api/alerts/{id}/resolve` (Engineer/Admin), history with user + comment, audit-logged;
+  `GET /api/machines/{id}/readings?range=1h|24h|7d` downsampled in PostgreSQL with `date_bin`
+  (30 s / 5 min / 30 min buckets, avg + min + max). Machines include `openAlertCount`.
+- **UI**: Machine Monitoring list (search, status and zone filters, alerts column, Show in 3D,
+  all active alerts), machine detail (range selector, one chart per sensor with avg line, min–max band,
+  labelled warning/critical limit lines, tooltip, table view, alerts with acknowledge/resolve, maintenance
+  history). Sidebar sign-in (JWT in sessionStorage). Verified in Chrome.
+
+### Known limitations (M4)
+
+- Live readings are 5-second points while history is 1-minute; charts downsample, so it is not visible.
+- Alerts are never auto-resolved when a value returns within limits; a human resolves them (by design).
+- The simulator adds ~850k rows/day while running; "Reset demo data" (M11) clears them.
+
 ## Next
 
-Milestone 4 — live simulator, time-series charts with limit lines, threshold alerts + acknowledgement.
+Milestone 5 — Remote Site Inspection (zones → observations → detail, status/assign, 3D zone highlight, summary).
