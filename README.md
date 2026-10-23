@@ -102,6 +102,14 @@ cd ml-service
 The API scores every machine every 5 minutes. If the ML service is down, the UI says
 "ML service unavailable" and shows no score. Evaluation numbers are on synthetic data only.
 
+## AI assistant (optional)
+
+Set `ANTHROPIC_API_KEY` and `LLM__Model` (e.g. `claude-opus-5-5`) in `.env` and restart the API.
+Without them the assistant page shows **AI NOT CONFIGURED** and everything else still works. The
+assistant runs server-side only, uses read-only tools (plus report drafts), at most 6 tool calls per
+question, logs every tool call to `AuditLog`, and is rate-limited (10 requests/min per user). Server-side
+refusal fallback (`fallbacks: "default"`) is enabled on the Claude requests.
+
 ## Repository layout
 
 ```

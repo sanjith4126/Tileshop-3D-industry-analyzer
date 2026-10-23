@@ -42,3 +42,30 @@ real deployment must replace them with the site's own maintenance procedures.
 2. **Statistical anomaly** — ML score; recent data is unusual, not necessarily faulty.
 3. **Confirmed mechanical fault** — only a human records this (maintenance records).
 4. **Failure prediction** — **not implemented**; it needs labelled failure history from a real plant.
+
+## Maintenance prioritisation (workflow scoring rule)
+
+Source: `backend/TileTwin.Domain/Maintenance/MaintenancePrioritisation.cs` (unit-tested in
+`PrioritisationTests`). Machines flagged offline are excluded and listed separately. Every point is
+reported with the factor that produced it.
+
+| Factor | Points |
+|---|---|
+| Open critical threshold alert | 40 each, max 80 |
+| Open warning threshold alert | 15 each, max 30 |
+| Status Critical / Warning / Unknown | +20 / +10 / +20 |
+| Fresh ML statistical anomaly (≤ 15 min) | +25 |
+| Notable 24 h trend (≥ 10 % change) | 10 each, max 20 |
+| No inspection or corrective work in the last 30 days (or never) | +10 |
+
+| Score | Band |
+|---|---|
+| ≥ 80 | Immediate — inspect this shift |
+| 40–79 | High — plan within 24 h |
+| 15–39 | Medium — next scheduled window |
+| < 15 | Routine |
+
+The workflow output also lists the top three rule-table suggestions per machine, focus entity IDs for
+the 3D twin, a deterministic recommendation and (optionally, only when the LLM is configured) an AI
+rewording of that recommendation. It can store a PDF report. The weights are illustrative and must be
+agreed with the site's maintenance team before real use.

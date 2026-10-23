@@ -9,6 +9,7 @@ import { formatUtc } from '../../lib/status'
 import { focusEntity } from '../../store/focus'
 import { AlertsList } from '../monitoring/AlertsList'
 import { SensorChart } from '../monitoring/SensorChart'
+import { PrioritisationPanel } from './PrioritisationPanel'
 import { ScoreCard } from './ScoreCard'
 
 function SupportingCharts({ machineId, sensorIds }: { machineId: string; sensorIds: string[] }) {
@@ -126,6 +127,7 @@ export default function PredictivePage() {
         <h1 className="text-xl font-semibold">Predictive Maintenance</h1>
         <DemoBadge />
       </header>
+      <PrioritisationPanel />
       <div className="grid gap-4 xl:grid-cols-[17rem_1fr]">
         <Panel title="Machines">
           {list.isPending ? <Loading /> : list.isError ? <ErrorState error={list.error} onRetry={() => list.refetch()} /> : (

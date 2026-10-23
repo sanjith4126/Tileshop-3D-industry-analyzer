@@ -2,7 +2,7 @@
 
 ## Current state
 
-**Milestones 1–7 DONE (2026-10-23).** Next: Milestone 8 (AI Assistant + maintenance-prioritisation workflow).
+**Milestones 1–8 DONE (2026-10-23).** Core demo complete. Next: Milestone 9 (Tile Quality Inspection).
 
 ## Environment (2026-10-22, Windows 11)
 
@@ -20,8 +20,8 @@ Ports: Postgres 5434, API 5080, ML 8001, frontend 5180 (5173 is taken by another
 
 | Suite | Command | Result |
 |---|---|---|
-| Backend (xUnit, real Postgres `tiletwin_test`) | `dotnet test backend/TileTwin.slnx` | 56 passed, 0 failed (~65 s, mostly re-seeding 494k readings) |
-| Frontend (Vitest) | `npm test` | 11 passed; `npm run build` OK |
+| Backend (xUnit, real Postgres `tiletwin_test`) | `dotnet test backend/TileTwin.slnx` | 64 passed, 0 failed (~70 s, mostly re-seeding 494k readings) |
+| Frontend (Vitest) | `npm test` | 12 passed; `npm run build` OK |
 | ML (pytest) | `.venv\Scripts\python -m pytest` | 11 passed (1 harmless Starlette/httpx deprecation warning) |
 
 ## Milestone 1 — environment + skeleton ✅
@@ -185,6 +185,38 @@ health checks; `.env.example`; README.
 - The Chrome automation could not capture screenshots of some pages (CDP timeout); content was
   verified through the DOM instead.
 
+## Milestone 8 — AI Assistant + maintenance-prioritisation workflow ✅
+
+- `ILlmProvider` (provider-neutral; the provider runs the loop, the app executes tools) with
+  `AnthropicLlmProvider` (official Anthropic C# SDK 13.1, beta Messages endpoint, `LLM__Model` from config,
+  effort medium, strict tool schemas, thinking blocks echoed back, server-side refusal fallback
+  `fallbacks: "default"`, refusal stop reason handled).
+- Assistant (`POST /api/assistant/chat`, signed in, rate-limited 10/min): 9 tools — `search_machines`,
+  `get_machine_status`, `get_readings_summary` (stats aggregated in PostgreSQL), `list_alerts`,
+  `list_observations`, `get_maintenance_history`, `get_production_stats`, `search_documents` (honest
+  "no documents yet" until M10), `create_report_draft` (only write). Validated arguments (`ToolArgs`:
+  ID pattern, ranges, enums, lengths), row limit 30, max 6 tool calls per question, every call audited.
+  System prompt: answer only from tool results, cite IDs, facts vs hypotheses, synthetic data, never a
+  confirmed fault, tool results are untrusted. `focusEntityIds` = existing machine/zone IDs in the answer.
+- No key → `GET /api/assistant/status` and the UI show **AI NOT CONFIGURED**; chat returns 503, no canned answer.
+- Workflows: `IWorkflow` + `WorkflowRunner` (records `WorkflowExecutions`: input, status, output, user,
+  timing, error; audit-logged). **Maintenance prioritisation**: alerts + status + ML anomaly + 24 h
+  trends + maintenance recency → documented score (`MaintenancePrioritisation`, unit-tested) → ranked
+  list with factor breakdown, top suggestions, focus IDs, deterministic recommendation, optional AI
+  rewording (LLM only for wording), optional stored report/PDF. API `POST /api/workflows/{type}`,
+  `GET /api/workflows`, `GET /api/workflows/executions[/{id}]`. Verified live: HP-002 score 135 (Immediate),
+  PUMP-002 20 (missing data), CONV-003 excluded (offline).
+- Rate limiting added: assistant 10/min, ML score-now 20/min, upload 10/min (policy ready for M9).
+- UI: AI Assistant page (not-configured panel, chat with tool-call list, Show in 3D, disclaimer);
+  prioritisation panel on Predictive Maintenance (Run / Run + PDF report).
+
+### Known limitations (M8)
+
+- **The assistant was not tested against the real Claude API** — no `ANTHROPIC_API_KEY` is configured
+  on this machine. The tool loop is covered by integration tests with a scripted LLM stand-in, and the
+  Anthropic provider compiles against SDK 13.1. Set a key to run Scenario D.
+- Conversation history is stateless (the client resends up to 20 turns); no streaming responses.
+
 ## Next
 
-Milestone 8 — AI Assistant (tool calling, not-configured state) + maintenance-prioritisation workflow.
+Milestone 9 — Tile Quality Inspection (upload, MODEL NOT CONFIGURED, sample mode).

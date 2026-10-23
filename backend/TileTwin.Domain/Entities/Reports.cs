@@ -1,6 +1,6 @@
 namespace TileTwin.Domain.Entities;
 
-public enum ReportType { FactoryHealth, MachineAnomalies, MaintenanceHistory, SiteInspection }
+public enum ReportType { FactoryHealth, MachineAnomalies, MaintenanceHistory, SiteInspection, MaintenancePrioritisation }
 
 public enum ReportStatus { Draft, Final }
 

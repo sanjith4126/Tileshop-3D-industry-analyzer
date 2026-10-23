@@ -68,7 +68,8 @@ public class PredictiveService(TileTwinDbContext db, MachineService machines, Re
     {
         var patterns = new List<string>();
         var signals = new List<Signal>();
-        foreach (var t in trends)
+        // Most severe sensors first, so suggestions start with the critical one.
+        foreach (var t in trends.OrderBy(t => t.State switch { "Critical" => 0, "Warning" => 1, "Missing" => 2, _ => 3 }))
         {
             var suffix = AnomalyScoringService.Suffix(t.SensorId);
             var sensor = detail.Sensors.First(s => s.Id == t.SensorId);

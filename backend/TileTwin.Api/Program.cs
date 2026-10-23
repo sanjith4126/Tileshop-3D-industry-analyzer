@@ -5,7 +5,11 @@ using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.Threading.RateLimiting;
+using TileTwin.Api.Assistant;
 using TileTwin.Api.Configuration;
+using TileTwin.Api.Workflows;
+using TileTwin.Infrastructure.Llm;
 using TileTwin.Api.Services;
 using TileTwin.Infrastructure.Data;
 using TileTwin.Infrastructure.Seeding;
@@ -52,6 +56,23 @@ builder.Services.AddScoped<InspectionService>();
 builder.Services.AddScoped<PredictiveService>();
 builder.Services.AddScoped<TileTwin.Api.Reports.ReportBuilder>();
 builder.Services.AddScoped<TileTwin.Api.Reports.ReportService>();
+builder.Services.AddSingleton<ILlmProvider>(new AnthropicLlmProvider(config.AnthropicApiKey, config.LlmModel));
+builder.Services.AddScoped<AssistantTools>();
+builder.Services.AddScoped<AssistantService>();
+builder.Services.AddScoped<IWorkflow, MaintenancePrioritisationWorkflow>();
+builder.Services.AddScoped<WorkflowRunner>();
+
+// Rate limits on expensive endpoints (per signed-in user, else per IP).
+builder.Services.AddRateLimiter(o =>
+{
+    o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    void Policy(string name, int perMinute) => o.AddPolicy(name, ctx => RateLimitPartition.GetFixedWindowLimiter(
+        ctx.User.Identity?.Name ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = perMinute, Window = TimeSpan.FromMinutes(1) }));
+    Policy("assistant", 10);
+    Policy("ml", 20);
+    Policy("upload", 10);
+});
 builder.Services.AddScoped<AnomalyScoringService>();
 builder.Services.AddSingleton<MlStatus>();
 builder.Services.AddHttpClient<MlClient>(c =>
@@ -96,6 +117,7 @@ if (EnvFile.FindUpward("3d-assets", directory: true) is { } assetsDir)
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 app.MapControllers();
 
 app.Run();

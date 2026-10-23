@@ -18,7 +18,7 @@ public class PredictiveController(PredictiveService predictive, AnomalyScoringSe
         await predictive.GetAsync(machineId, ct) is { } p ? Ok(p) : NotFound();
 
     /// <summary>Score one machine now. Any signed-in user (rate-limited).</summary>
-    [HttpPost("predictive/{machineId}/score"), Authorize]
+    [HttpPost("predictive/{machineId}/score"), Authorize, Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("ml")]
     public async Task<IActionResult> Score(string machineId, CancellationToken ct)
     {
         var r = await scoring.ScoreAsync(machineId, ct);

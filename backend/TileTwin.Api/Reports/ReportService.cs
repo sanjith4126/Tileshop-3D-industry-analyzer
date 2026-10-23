@@ -15,6 +15,7 @@ public class ReportService(TileTwinDbContext db, ReportBuilder builder, TimeProv
 
     public static string? Validate(ReportRequest req, DateTime now)
     {
+        if (req.Type == ReportType.MaintenancePrioritisation) return "This report is produced by the maintenance-prioritisation workflow";
         var (from, to) = Period(req, now);
         if (from >= to) return "fromUtc must be before toUtc";
         if (to - from > MaxPeriod) return "Period may not exceed 366 days";
@@ -32,14 +33,19 @@ public class ReportService(TileTwinDbContext db, ReportBuilder builder, TimeProv
         var now = clock.GetUtcNow().UtcDateTime;
         var (from, to) = Period(req, now);
         var doc = await builder.BuildAsync(req.Type!.Value, from, to, req.MachineId, req.ZoneId, now, ct);
+        return await SaveAsync(doc, req.Status, user, JsonSerializer.Serialize(req, Json), ct);
+    }
+
+    public async Task<ReportDto> SaveAsync(ReportDocument doc, ReportStatus status, string user, string parametersJson, CancellationToken ct)
+    {
         var report = new Report
         {
-            Id = Guid.NewGuid(), Type = doc.Type, Status = req.Status, Title = doc.Title, GeneratedUtc = now, GeneratedBy = user,
-            ParametersJson = JsonSerializer.Serialize(req, Json), ContentJson = JsonSerializer.Serialize(doc, Json),
+            Id = Guid.NewGuid(), Type = doc.Type, Status = status, Title = doc.Title, GeneratedUtc = doc.GeneratedUtc, GeneratedBy = user,
+            ParametersJson = parametersJson, ContentJson = JsonSerializer.Serialize(doc, Json),
             DataOrigin = DataOrigin.Real, // user-generated record (its content states whether data is synthetic)
         };
         db.Reports.Add(report);
-        audit.Add(user, "report.create", report.Id.ToString(), new { req.Type, from, to, req.MachineId, req.ZoneId, req.Status });
+        audit.Add(user, "report.create", report.Id.ToString(), new { doc.Type, status });
         await db.SaveChangesAsync(ct);
         return new ReportDto(report.Id, report.Status, user, doc);
     }

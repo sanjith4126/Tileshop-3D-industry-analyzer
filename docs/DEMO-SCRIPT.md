@@ -41,8 +41,16 @@ Glazing & Inspection zone has open Critical/High observations with corrective-ac
    - ML scores refresh every 5 minutes; signed-in users can press **Score now**.
    - Stop the ML service to show the honest "ML service unavailable — no anomaly score" state.
 5. Click **Anomaly report (PDF) →**, sign in (any dev user), **Generate report**, then **Download PDF**.
-6. Maintenance-prioritisation workflow: Milestone 8.
+6. On **Predictive Maintenance**, sign in and click **Run + PDF report** in "Maintenance prioritisation
+   workflow": HP-002 ranks first (Immediate band) with every score point explained, PUMP-002 follows
+   (missing data), CONV-003 is listed as excluded (offline). Click **Download PDF report**.
 
 ## Scenario C — Tile quality (Milestone 9)
 
-## Scenario D — AI assistant (Milestone 8)
+## Scenario D — AI assistant
+
+- **With a key** (`ANTHROPIC_API_KEY` + `LLM__Model` in `.env`, restart API): sign in, open
+  **AI Assistant**, ask "Which machines have active alerts?". The answer cites record IDs (e.g.
+  MACHINE-HP-002, alert/sensor IDs), separates facts from hypotheses, mentions synthetic data, lists the
+  tool calls it made and offers **Show MACHINE-HP-002 in 3D**.
+- **Without a key**: the page shows **AI NOT CONFIGURED — set ANTHROPIC_API_KEY** and no canned answer.

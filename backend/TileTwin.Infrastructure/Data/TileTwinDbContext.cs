@@ -41,6 +41,7 @@ public class TileTwinDbContext(DbContextOptions<TileTwinDbContext> options) : Id
     public DbSet<AnomalyScore> AnomalyScores => Set<AnomalyScore>();
     public DbSet<MlModel> MlModels => Set<MlModel>();
     public DbSet<Report> Reports => Set<Report>();
+    public DbSet<WorkflowExecution> WorkflowExecutions => Set<WorkflowExecution>();
     public DbSet<DemoState> DemoState => Set<DemoState>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
@@ -96,6 +97,7 @@ public class TileTwinDbContext(DbContextOptions<TileTwinDbContext> options) : Id
             e.HasIndex(a => new { a.Status, a.MachineId });
         });
         b.Entity<Report>().HasIndex(r => r.GeneratedUtc);
+        b.Entity<WorkflowExecution>().HasIndex(w => w.StartedUtc);
         b.Entity<AnomalyScore>(e =>
         {
             e.HasOne<Machine>().WithMany().HasForeignKey(a => a.MachineId);
