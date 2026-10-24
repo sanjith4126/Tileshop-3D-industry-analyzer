@@ -68,7 +68,7 @@ Glazing & Inspection zone has open Critical/High observations with corrective-ac
 
 ## Scenario D — AI assistant
 
-- **With a key** (`ANTHROPIC_API_KEY` + `LLM__Model` in `.env`, restart API): sign in, open
+- **With a key** (`GROQ_API_KEY` + `LLM__Provider=groq`, or `ANTHROPIC_API_KEY` + `LLM__Model`, in `.env`; restart API): sign in, open
   **AI Assistant**, ask "Which machines have active alerts?". The answer cites record IDs (e.g.
   MACHINE-HP-002, alert/sensor IDs), separates facts from hypotheses, mentions synthetic data, lists the
   tool calls it made and offers **Show MACHINE-HP-002 in 3D**.

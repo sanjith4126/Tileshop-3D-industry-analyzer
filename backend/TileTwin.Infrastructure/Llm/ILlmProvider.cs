@@ -16,6 +16,9 @@ public interface ILlmProvider
 {
     bool IsConfigured { get; }
 
+    /// <summary>Provider and model, e.g. "Groq · openai/gpt-oss-120b".</summary>
+    string Description { get; }
+
     Task<LlmResult> RunAsync(string system, IReadOnlyList<ChatTurn> history, IReadOnlyList<LlmTool> tools,
         Func<string, JsonElement, CancellationToken, Task<(string Result, bool IsError)>> executeTool,
         int maxToolCalls, CancellationToken ct);

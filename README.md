@@ -40,7 +40,8 @@ Edit `.env` and set at least:
 | `POSTGRES_PASSWORD` | any password; use the **same** value after `Password=` in `POSTGRES_CONNECTION` |
 | `JWT__SigningKey` | a long random value (≥ 32 chars), e.g. the output of `openssl rand -base64 48` (available in Git Bash) |
 | `DEV_SEED_USER_PASSWORD` | a password (≥ 12 chars) for the DEV ONLY users, needed to sign in |
-| `ANTHROPIC_API_KEY`, `LLM__Model` | optional (e.g. `claude-opus-5-5`); empty = **AI NOT CONFIGURED** |
+| `GROQ_API_KEY` + `LLM__Provider=groq` | optional AI assistant via Groq (default model `openai/gpt-oss-120b`) |
+| `ANTHROPIC_API_KEY`, `LLM__Model` | optional alternative: Claude (e.g. `claude-opus-5-5`). No AI key = **AI NOT CONFIGURED** |
 | `TILE_MODEL_PATH` | optional ONNX tile model; empty = **MODEL NOT CONFIGURED** |
 
 ```powershell
@@ -103,8 +104,10 @@ in one transaction and re-seeds; user-created rows are kept.
 
 ## Optional components
 
-- **AI assistant**: set `ANTHROPIC_API_KEY` and `LLM__Model`, restart the API. Server-side only,
-  read-only tools (plus report drafts), ≤ 6 tool calls per question, every call audited, rate-limited.
+- **AI assistant**: set `GROQ_API_KEY` with `LLM__Provider=groq` (Groq, default model
+  `openai/gpt-oss-120b`) or `ANTHROPIC_API_KEY` + `LLM__Model` (Claude), restart the API. Server-side
+  only, read-only tools (plus report drafts), ≤ 6 tool calls per question, every call audited,
+  rate-limited. The same provider rewords the maintenance-prioritisation recommendation.
 - **ML service**: models train on synthetic data at first start. `python -m app.train` retrains,
   `python -m app.evaluate` regenerates [docs/ML-EVALUATION.md](docs/ML-EVALUATION.md). If the service is
   down the UI says "ML service unavailable" and shows no score.

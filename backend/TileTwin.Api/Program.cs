@@ -56,7 +56,11 @@ builder.Services.AddScoped<InspectionService>();
 builder.Services.AddScoped<PredictiveService>();
 builder.Services.AddScoped<TileTwin.Api.Reports.ReportBuilder>();
 builder.Services.AddScoped<TileTwin.Api.Reports.ReportService>();
-builder.Services.AddSingleton<ILlmProvider>(new AnthropicLlmProvider(config.AnthropicApiKey, config.LlmModel));
+if (config.UseGroq)
+    builder.Services.AddSingleton<ILlmProvider>(new GroqLlmProvider(
+        new HttpClient { BaseAddress = new Uri("https://api.groq.com/openai/v1/"), Timeout = TimeSpan.FromSeconds(90) }, config.GroqApiKey, config.LlmModel));
+else
+    builder.Services.AddSingleton<ILlmProvider>(new AnthropicLlmProvider(config.AnthropicApiKey, config.LlmModel));
 builder.Services.AddScoped<AssistantTools>();
 builder.Services.AddScoped<AssistantService>();
 builder.Services.AddScoped<IWorkflow, MaintenancePrioritisationWorkflow>();

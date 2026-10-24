@@ -21,7 +21,8 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         Environment.SetEnvironmentVariable("Simulator__Enabled", "false"); // tests drive SimulationEngine directly
         Environment.SetEnvironmentVariable("Ml__ScheduledScoring", "false");
         Environment.SetEnvironmentVariable("RateLimiting__Disabled", "true"); // many logins per test run; RateLimitTests re-enables
-        Environment.SetEnvironmentVariable("ANTHROPIC_API_KEY", " "); // never call the real LLM from tests (whitespace = not configured)
+        Environment.SetEnvironmentVariable("ANTHROPIC_API_KEY", " "); // never call a real LLM from tests (whitespace = not configured)
+        Environment.SetEnvironmentVariable("GROQ_API_KEY", " ");
         Environment.SetEnvironmentVariable("ML_SERVICE_URL", "http://127.0.0.1:9"); // nothing listens: tests the "unavailable" path
         EnvFile.Load();
         var conn = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION")

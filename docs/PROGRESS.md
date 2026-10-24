@@ -289,6 +289,16 @@ health checks; `.env.example`; README.
   hint), 1 intentional effect dependency (camera focus runs only on a new focus request), 1 setState in
   an effect reacting to the shared focus store. Left as is.
 
+## Post-M12: Groq provider (2026-10-24)
+
+- Added `GroqLlmProvider` (OpenAI-compatible chat completions with function calling, plain HTTP) behind
+  `ILlmProvider`, selected by `LLM__Provider=groq` or when only `GROQ_API_KEY` is set (spec change
+  approved by the user). Same guarantees: app-executed tools, ≤ 6 calls, invalid JSON arguments
+  rejected, forced final answer at the limit, errors → 502 with no answer, 429 → rate-limit message.
+- Default model `openai/gpt-oss-120b` (checked against Groq's model list; tool calling verified).
+- Unit tests with a fake HTTP handler (4); test host blanks both AI keys so tests never call a real LLM.
+- System prompt now asks for plain text (the chat UI does not render Markdown tables).
+
 ## Definition of Done (§11)
 
 | Requirement | Status |
@@ -297,13 +307,13 @@ health checks; `.env.example`; README.
 | Scenario A (remote inspection) | ✅ verified in browser (M5) and by smoke script |
 | Scenario B (machine anomaly → 3D → charts → ML → maintenance → workflow → PDF) | ✅ verified in browser (M3–M7) and by smoke script |
 | Scenario C (tile quality: MODEL NOT CONFIGURED / sample mode) | ✅ smoke script + UI tests; real-model path tested in pytest with a tiny ONNX model |
-| Scenario D (assistant) | ⚠️ not-configured path ✅; **with-key path not run** — no `ANTHROPIC_API_KEY` on this machine (tool loop covered by tests with a scripted LLM) |
+| Scenario D (assistant) | ✅ live via **Groq** (`openai/gpt-oss-120b`): "Which machines have active alerts?" → `list_alerts` → answer citing MACHINE-HP-002, alert and sensor IDs, synthetic-data note, Show in 3D; not-configured path tested too. Anthropic provider compiles but has not been run live (no key) |
 | All automated tests pass, results recorded | ✅ table above |
 | docs: architecture, troubleshooting, demo script, ML evaluation, real-world list | ✅ `docs/` |
 
 ## Remaining limitations (overall)
 
-- Assistant not exercised against the real Claude API (needs a key).
+- Assistant runs live on Groq; the Anthropic/Claude provider has not been run against the real API (no key).
 - No embedding provider implementation (keyword search only); no tile model shipped.
 - Swagger UI has no "Authorize" button (use the frontend or curl with a bearer token for writes).
 - Single-table readings without retention/partitioning; the simulator adds ~850k rows per day while running.

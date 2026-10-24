@@ -16,6 +16,7 @@ public sealed class AnthropicLlmProvider(string? apiKey, string? model) : ILlmPr
     readonly AnthropicClient? _client = string.IsNullOrWhiteSpace(apiKey) ? null : new AnthropicClient { ApiKey = apiKey };
 
     public bool IsConfigured => _client is not null && !string.IsNullOrWhiteSpace(model);
+    public string Description => $"Anthropic · {model}";
 
     public async Task<LlmResult> RunAsync(string system, IReadOnlyList<ChatTurn> history, IReadOnlyList<LlmTool> tools,
         Func<string, JsonElement, CancellationToken, Task<(string Result, bool IsError)>> executeTool,

@@ -13,8 +13,8 @@
 | "ML service unavailable" | ML service not running or wrong `ML_SERVICE_URL` | `cd ml-service; .venv\Scripts\python -m uvicorn app.main:app --port 8001` |
 | No ML score / "insufficient data" | Fewer than 45 of the last 60 minutes have readings | Wait a few minutes; restarting the API fills missing minutes |
 | Tile upload: **MODEL NOT CONFIGURED** | No ONNX model configured (expected in the demo) | See `docs/TILE-MODEL.md`; set `TILE_MODEL_PATH` and restart the ML service |
-| Assistant: **AI NOT CONFIGURED** | `ANTHROPIC_API_KEY` or `LLM__Model` empty | Set both in `.env`, restart the API |
-| Assistant returns 502 | Invalid key, model ID or network problem | Check the API log ("LLM call failed"); verify the key and `LLM__Model` |
+| Assistant: **AI NOT CONFIGURED** | No AI key set | Set `GROQ_API_KEY` + `LLM__Provider=groq`, or `ANTHROPIC_API_KEY` + `LLM__Model`, in `.env`; restart the API |
+| Assistant returns 502 | Invalid key, unknown model ID, provider rate limit or network problem | Check the API log ("LLM call failed"); verify the key and `LLM__Model` (Groq models: `GET https://api.groq.com/openai/v1/models`) |
 | HTTP 429 | Rate limit reached | Wait a minute |
 | Cannot sign in as dev users | Not Development, or `DEV_SEED_USER_PASSWORD` empty | Set it in `.env` and restart the API (dev users are re-synced to that password at start) |
 | Backend tests fail to connect | The compose Postgres is not running | Start it; tests create and use `tiletwin_test` |

@@ -3,18 +3,17 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using TileTwin.Api.Assistant;
-using TileTwin.Api.Configuration;
 using TileTwin.Infrastructure.Llm;
 
 namespace TileTwin.Api.Controllers;
 
 [ApiController, Route("api/assistant")]
-public class AssistantController(AssistantService assistant, ILlmProvider llm, AppConfig config, ILogger<AssistantController> log) : ControllerBase
+public class AssistantController(AssistantService assistant, ILlmProvider llm, ILogger<AssistantController> log) : ControllerBase
 {
-    public const string NotConfigured = "AI NOT CONFIGURED — set ANTHROPIC_API_KEY and LLM__Model";
+    public const string NotConfigured = "AI NOT CONFIGURED — set GROQ_API_KEY, or ANTHROPIC_API_KEY and LLM__Model";
 
     [HttpGet("status")]
-    public IActionResult Status() => Ok(new { configured = llm.IsConfigured, model = llm.IsConfigured ? config.LlmModel : null, message = llm.IsConfigured ? null : NotConfigured });
+    public IActionResult Status() => Ok(new { configured = llm.IsConfigured, model = llm.IsConfigured ? llm.Description : null, message = llm.IsConfigured ? null : NotConfigured });
 
     [HttpPost("chat"), Authorize, EnableRateLimiting("assistant"), Microsoft.AspNetCore.Http.Timeouts.RequestTimeout("long")]
     public async Task<IActionResult> Chat(ChatRequest req, CancellationToken ct)
@@ -29,6 +28,11 @@ public class AssistantController(AssistantService assistant, ILlmProvider llm, A
         {
             log.LogWarning("LLM call failed: {Message}", ex.Message);
             return StatusCode(502, new { error = "The AI service returned an error. No answer was generated." });
+        }
+        catch (LlmApiException ex)
+        {
+            log.LogWarning("LLM call failed: {Message}", ex.Message);
+            return StatusCode(502, new { error = ex.Status == 429 ? "The AI service rate limit was reached. Try again in a minute." : "The AI service returned an error. No answer was generated." });
         }
         catch (HttpRequestException ex)
         {

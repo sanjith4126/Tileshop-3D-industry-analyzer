@@ -17,6 +17,7 @@ namespace TileTwin.Tests.Integration;
 sealed class ScriptedLlm(params (string Tool, string InputJson)[] calls) : ILlmProvider
 {
     public bool IsConfigured => true;
+    public string Description => "scripted test LLM";
     public List<(string Result, bool IsError)> Results { get; } = [];
 
     public async Task<LlmResult> RunAsync(string system, IReadOnlyList<ChatTurn> history, IReadOnlyList<LlmTool> tools,

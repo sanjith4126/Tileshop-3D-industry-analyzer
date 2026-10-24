@@ -47,7 +47,7 @@ export default function AssistantPage() {
       {!status.data.configured ? (
         <div role="alert" className="max-w-2xl rounded-lg border border-amber-500/50 bg-amber-950/30 p-5">
           <p className="text-lg font-bold text-amber-300">AI NOT CONFIGURED</p>
-          <p className="mt-2 text-sm text-slate-300">Set <code className="text-amber-200">ANTHROPIC_API_KEY</code> and <code className="text-amber-200">LLM__Model</code> in <code>.env</code>, then restart the backend.</p>
+          <p className="mt-2 text-sm text-slate-300">Set <code className="text-amber-200">GROQ_API_KEY</code> (with <code className="text-amber-200">LLM__Provider=groq</code>), or <code className="text-amber-200">ANTHROPIC_API_KEY</code> and <code className="text-amber-200">LLM__Model</code>, in <code>.env</code>, then restart the backend.</p>
           <p className="mt-2 text-xs text-slate-500">No canned answers are shown. All other modules work without AI.</p>
         </div>
       ) : !session ? (

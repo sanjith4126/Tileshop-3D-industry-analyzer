@@ -8,6 +8,9 @@ public sealed class AppConfig
     public required string ConnectionString { get; init; }
     public required string JwtSigningKey { get; init; }
     public string? AnthropicApiKey { get; init; }
+    public string? GroqApiKey { get; init; }
+    /// <summary>"anthropic" or "groq"; empty = whichever key is set (Anthropic first).</summary>
+    public string? LlmProvider { get; init; }
     public string? LlmModel { get; init; }
     public string? EmbeddingsProvider { get; init; }
     public required string MlServiceUrl { get; init; }
@@ -17,10 +20,17 @@ public sealed class AppConfig
     public const string JwtAudience = "TileTwin";
 
     public FeatureStatus Features(bool isDevelopment) => new(
-        Ai: !string.IsNullOrWhiteSpace(AnthropicApiKey) && !string.IsNullOrWhiteSpace(LlmModel),
+        Ai: UseGroq ? !string.IsNullOrWhiteSpace(GroqApiKey) : !string.IsNullOrWhiteSpace(AnthropicApiKey) && !string.IsNullOrWhiteSpace(LlmModel),
         Embeddings: false, // no IEmbeddingProvider implementation ships; EMBEDDINGS__Provider alone does not enable it
         MlServiceUrl: MlServiceUrl,
         DevUsers: isDevelopment && !string.IsNullOrWhiteSpace(DevSeedUserPassword));
+
+    public bool UseGroq => LlmProvider?.Trim().ToLowerInvariant() switch
+    {
+        "groq" => true,
+        "anthropic" => false,
+        _ => string.IsNullOrWhiteSpace(AnthropicApiKey) && !string.IsNullOrWhiteSpace(GroqApiKey),
+    };
 
     public static AppConfig Load(IConfiguration c)
     {
@@ -40,6 +50,8 @@ public sealed class AppConfig
             ConnectionString = conn!,
             JwtSigningKey = jwt!,
             AnthropicApiKey = c["ANTHROPIC_API_KEY"],
+            GroqApiKey = c["GROQ_API_KEY"],
+            LlmProvider = c["LLM:Provider"],
             LlmModel = c["LLM:Model"],
             EmbeddingsProvider = c["EMBEDDINGS:Provider"],
             MlServiceUrl = string.IsNullOrWhiteSpace(c["ML_SERVICE_URL"]) ? "http://localhost:8001" : c["ML_SERVICE_URL"]!,
@@ -50,7 +62,8 @@ public sealed class AppConfig
     public void LogFeatureStatus(ILogger log, bool isDevelopment)
     {
         var f = Features(isDevelopment);
-        if (!f.Ai) log.LogWarning("AI assistant DISABLED: ANTHROPIC_API_KEY and/or LLM__Model not set (UI shows AI NOT CONFIGURED)");
+        if (!f.Ai) log.LogWarning("AI assistant DISABLED: set GROQ_API_KEY, or ANTHROPIC_API_KEY + LLM__Model (UI shows AI NOT CONFIGURED)");
+        else log.LogInformation("AI assistant provider: {Provider}", UseGroq ? "Groq" : "Anthropic");
         if (!string.IsNullOrWhiteSpace(EmbeddingsProvider))
             log.LogWarning("EMBEDDINGS__Provider '{Provider}' is set but no embedding provider is implemented; using keyword search", EmbeddingsProvider);
         if (!f.Embeddings) log.LogWarning("Embeddings DISABLED: knowledge search uses PostgreSQL keyword search");
