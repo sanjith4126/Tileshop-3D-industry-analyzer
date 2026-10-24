@@ -6,8 +6,10 @@ Never returns a made-up score: insufficient data -> 422 with the reason.
 
 from __future__ import annotations
 
+import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from pathlib import Path
 
 import numpy as np
 from fastapi import FastAPI, File, HTTPException, UploadFile
@@ -24,8 +26,21 @@ TILE: dict = {"model": None, "status": tile.NOT_CONFIGURED}
 MAX_IMAGE_BYTES = 10 * 1024 * 1024
 
 
+def load_env_file(path: Path = Path(__file__).resolve().parents[2] / ".env") -> None:
+    """Reads the repo-root .env (e.g. TILE_MODEL_PATH) without overriding real environment variables."""
+    if os.environ.get("TILETWIN_SKIP_DOTENV") or not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if "=" not in line or line.lstrip().startswith("#"):
+            continue
+        key, value = line.split("=", 1)
+        value = "" if value.strip().startswith("#") else value.split(" #")[0].strip().strip('"')
+        os.environ.setdefault(key.strip(), value)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    load_env_file()
     # Models train on synthetic data in seconds, so the demo works out of the box without a train step.
     MODELS.update(m.load_all() or m.train_all())
     TILE["model"], TILE["status"] = tile.load_from_env()

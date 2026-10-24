@@ -15,7 +15,7 @@ public class ReportsController(ReportService reports, TimeProvider clock) : Cont
         await reports.GetAsync(id, ct) is { } r ? Ok(r) : NotFound();
 
     /// <summary>Generates and stores a report. Any signed-in role.</summary>
-    [HttpPost, Authorize]
+    [HttpPost, Authorize, Microsoft.AspNetCore.Http.Timeouts.RequestTimeout("long")]
     public async Task<IActionResult> Create(ReportRequest req, CancellationToken ct)
     {
         if (ReportService.Validate(req, clock.GetUtcNow().UtcDateTime) is { } error)
@@ -24,7 +24,7 @@ public class ReportsController(ReportService reports, TimeProvider clock) : Cont
         return CreatedAtAction(nameof(Get), new { id = r.Id }, r);
     }
 
-    [HttpGet("{id:guid}/pdf")]
+    [HttpGet("{id:guid}/pdf"), Microsoft.AspNetCore.Http.Timeouts.RequestTimeout("long")]
     public async Task<IActionResult> Pdf(Guid id, CancellationToken ct)
     {
         if (await reports.GetAsync(id, ct) is not { } r) return NotFound();

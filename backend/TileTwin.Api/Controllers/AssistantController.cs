@@ -16,7 +16,7 @@ public class AssistantController(AssistantService assistant, ILlmProvider llm, A
     [HttpGet("status")]
     public IActionResult Status() => Ok(new { configured = llm.IsConfigured, model = llm.IsConfigured ? config.LlmModel : null, message = llm.IsConfigured ? null : NotConfigured });
 
-    [HttpPost("chat"), Authorize, EnableRateLimiting("assistant")]
+    [HttpPost("chat"), Authorize, EnableRateLimiting("assistant"), Microsoft.AspNetCore.Http.Timeouts.RequestTimeout("long")]
     public async Task<IActionResult> Chat(ChatRequest req, CancellationToken ct)
     {
         if (!llm.IsConfigured) return StatusCode(503, new { configured = false, error = NotConfigured });

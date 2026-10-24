@@ -36,7 +36,7 @@ public class AdminController(UserAdminService userAdmin, TileTwinDbContext db, D
         Ok(await db.AuditLog.AsNoTracking().OrderByDescending(a => a.TimestampUtc).Take(Math.Clamp(limit, 1, 500)).ToListAsync(ct));
 
     /// <summary>Deletes only Synthetic rows of the demo batch (in one transaction) and re-seeds. User-created rows are kept.</summary>
-    [HttpPost("reset-demo")]
+    [HttpPost("reset-demo"), Microsoft.AspNetCore.Http.Timeouts.RequestTimeout("long")]
     public async Task<IActionResult> ResetDemo(CancellationToken ct)
     {
         await SimulationEngine.DemoLock.WaitAsync(ct);

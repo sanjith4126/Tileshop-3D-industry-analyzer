@@ -3,6 +3,15 @@
 All data is synthetic (fictional TileTwin Demonstration Facility). Start Postgres, the API, the ML
 service and the frontend as in the README, then open http://localhost:5180.
 
+## Before the demo
+
+1. Start Postgres, the API, the ML service and the frontend (README → Run).
+2. Run `python scripts/smoke.py` — all 20 checks should pass (it rehearses Scenarios A–D at API level).
+3. Optional: **Administration → Reset demo data** (sign in as `dev.admin@tiletwin.local`) so the
+   HP-002 drift and alert timeline are fresh. Wait ~20 s, then ~5 min for the first ML scores (or use
+   **Score now** on Predictive Maintenance).
+4. Dev user password = `DEV_SEED_USER_PASSWORD` in `.env`.
+
 ## Scripted data patterns (deterministic seed `demo-v1`, fixed random seed 20261022)
 
 | Machine | Pattern | Expected status |

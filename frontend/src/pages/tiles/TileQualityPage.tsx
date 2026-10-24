@@ -43,12 +43,8 @@ export default function TileQualityPage() {
   const [localError, setLocalError] = useState<string | null>(null)
   const [sampleMode, setSampleMode] = useState(false)
 
-  useEffect(() => {
-    if (!file) return setPreview(null)
-    const url = URL.createObjectURL(file)
-    setPreview(url)
-    return () => URL.revokeObjectURL(url)
-  }, [file])
+  // Revoke the last preview URL when leaving the page.
+  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview) }, [preview])
 
   const upload = useMutation({
     mutationFn: async (f: File) => {
@@ -70,6 +66,7 @@ export default function TileQualityPage() {
     if (f && !['image/jpeg', 'image/png'].includes(f.type)) return setLocalError('Choose a JPEG or PNG image.')
     if (f && f.size > MAX_BYTES) return setLocalError('Image is larger than 10 MB.')
     setFile(f)
+    setPreview(f ? URL.createObjectURL(f) : null)
   }
 
   const s = status.data

@@ -89,7 +89,7 @@ public class MachinesController(MachineService machines, ReadingsService reading
 [ApiController, Route("api/auth")]
 public class AuthController(AuthService auth) : ControllerBase
 {
-    [HttpPost("login")]
+    [HttpPost("login"), Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("login")]
     public async Task<IActionResult> Login(LoginRequest req, CancellationToken ct) =>
         await auth.LoginAsync(req, ct) is { } res ? Ok(res) : Unauthorized(new { error = "Invalid email or password" });
 

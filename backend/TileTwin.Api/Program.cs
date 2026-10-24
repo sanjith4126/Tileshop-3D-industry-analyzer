@@ -78,12 +78,22 @@ builder.Services.AddScoped<WorkflowRunner>();
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    void Policy(string name, int perMinute) => o.AddPolicy(name, ctx => RateLimitPartition.GetFixedWindowLimiter(
-        ctx.User.Identity?.Name ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
-        _ => new FixedWindowRateLimiterOptions { PermitLimit = perMinute, Window = TimeSpan.FromMinutes(1) }));
+    var disabled = builder.Configuration.GetValue("RateLimiting:Disabled", false); // integration tests only
+    void Policy(string name, int perMinute) => o.AddPolicy(name, ctx => disabled ? RateLimitPartition.GetNoLimiter("off")
+        : RateLimitPartition.GetFixedWindowLimiter(
+            ctx.User.Identity?.Name ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
+            _ => new FixedWindowRateLimiterOptions { PermitLimit = perMinute, Window = TimeSpan.FromMinutes(1) }));
     Policy("assistant", 10);
     Policy("ml", 20);
     Policy("upload", 10);
+    Policy("login", 10); // per IP when anonymous; accounts also lock after 5 failures
+});
+
+// Request timeouts: 30 s by default, longer for LLM / workflow / report / reset endpoints.
+builder.Services.AddRequestTimeouts(o =>
+{
+    o.DefaultPolicy = new Microsoft.AspNetCore.Http.Timeouts.RequestTimeoutPolicy { Timeout = TimeSpan.FromSeconds(30) };
+    o.AddPolicy("long", TimeSpan.FromSeconds(150));
 });
 builder.Services.AddScoped<AnomalyScoringService>();
 builder.Services.AddSingleton<MlStatus>();
@@ -130,6 +140,7 @@ if (EnvFile.FindUpward("3d-assets", directory: true) is { } assetsDir)
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
+app.UseRequestTimeouts();
 app.MapControllers();
 
 app.Run();

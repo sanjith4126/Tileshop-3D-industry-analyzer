@@ -12,7 +12,7 @@ public class WorkflowsController(WorkflowRunner runner) : ControllerBase
     public IActionResult List() => Ok(runner.All.Select(w => new { w.Type, w.Description, w.InputSchema, w.AllowedTools }));
 
     /// <summary>Run a workflow. Any signed-in role.</summary>
-    [HttpPost("{type}"), Authorize]
+    [HttpPost("{type}"), Authorize, Microsoft.AspNetCore.Http.Timeouts.RequestTimeout("long")]
     public async Task<IActionResult> Run(string type, [FromBody] JsonElement input, CancellationToken ct) =>
         await runner.RunAsync(type, input, User.Identity!.Name!, ct) is { } r ? Ok(r) : NotFound();
 

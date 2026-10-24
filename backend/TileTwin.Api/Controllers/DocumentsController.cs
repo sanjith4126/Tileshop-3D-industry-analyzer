@@ -25,7 +25,7 @@ public class DocumentsController(KnowledgeService knowledge, IEmbeddingProvider 
             : Ok(await knowledge.SearchAsync(q, limit, ct));
 
     /// <summary>Upload PDF / TXT / MD (max 10 MB, validated by content).</summary>
-    [HttpPost, Authorize(Roles = Writers), EnableRateLimiting("upload"), RequestSizeLimit(KnowledgeService.MaxBytes + 64 * 1024)]
+    [HttpPost, Authorize(Roles = Writers), EnableRateLimiting("upload"), Microsoft.AspNetCore.Http.Timeouts.RequestTimeout("long"), RequestSizeLimit(KnowledgeService.MaxBytes + 64 * 1024)]
     public async Task<IActionResult> Upload(IFormFile? file, [FromForm] string? title, CancellationToken ct)
     {
         if (file is null || file.Length == 0) return Bad("No file uploaded");

@@ -2,7 +2,7 @@
 
 ## Current state
 
-**Milestones 1–11 DONE (2026-10-24).** Next: Milestone 12 (full test pass, docs, smoke checklist).
+**All 12 milestones DONE (2026-10-24).** See the Definition-of-Done checklist at the end.
 
 ## Environment (2026-10-22, Windows 11)
 
@@ -16,13 +16,14 @@
 
 Ports: Postgres 5434, API 5080, ML 8001, frontend 5180 (5173 is taken by another local app).
 
-## Test results (last run 2026-10-22)
+## Test results (final run 2026-10-24)
 
 | Suite | Command | Result |
 |---|---|---|
-| Backend (xUnit, real Postgres `tiletwin_test`) | `dotnet test backend/TileTwin.slnx` | 80 passed, 0 failed (~65 s, mostly re-seeding 494k readings) |
-| Frontend (Vitest) | `npm test` | 17 passed; `npm run build` OK |
-| ML (pytest) | `.venv\Scripts\python -m pytest` | 16 passed (1 harmless Starlette/httpx deprecation warning) |
+| Backend (xUnit, real Postgres `tiletwin_test`) | `dotnet test backend/TileTwin.slnx` | **81 passed, 0 failed** (~65 s, mostly re-seeding 494k readings) |
+| Frontend (Vitest) | `npm test` | **17 passed**; `npm run build` OK; `oxlint` 0 errors, 8 warnings (see M12) |
+| End-to-end smoke | `python scripts/smoke.py` (services running) | **20/20 checks passed** (Scenarios A–D at API level) |
+| ML (pytest) | `.venv\Scripts\python -m pytest` | **16 passed** (1 harmless Starlette/httpx deprecation warning) |
 
 ## Milestone 1 — environment + skeleton ✅
 
@@ -273,6 +274,37 @@ health checks; `.env.example`; README.
   resumed (14 scored, HP-002 anomalous). Both modes have integration tests.
 - No placeholder pages remain (only the 404 page).
 
-## Next
+## Milestone 12 — test pass, docs, rehearsal ✅
 
-Milestone 12 — full test pass, ARCHITECTURE / TROUBLESHOOTING docs, real-world-readiness list, smoke checklist.
+- Security sweep against §8.11: every write endpoint has role checks (listed and verified); added a
+  login rate limit (10/min per client, plus Identity lockout after 5 failures) and request timeouts
+  (30 s default, 150 s for assistant / workflows / reports / reset). Rate limiting can be disabled only
+  by configuration (used by the integration test host); `RateLimitTests` re-enables it and checks 429.
+- ML service now reads the repo `.env` (so `TILE_MODEL_PATH` works from `.env`); tests skip it.
+- `scripts/smoke.py`: 20 end-to-end checks rehearsing Scenarios A–D against the running services.
+- Docs: `ARCHITECTURE.md`, `TROUBLESHOOTING.md`, `REAL-WORLD-READINESS.md`, README rewritten as a
+  complete newcomer guide (config values, setup, run, smoke, tests, docs index); DEMO-SCRIPT
+  "Before the demo" checklist.
+- Lint (oxlint): 0 errors, 8 warnings — 6 × fast-refresh "only export components" (dev-only HMR
+  hint), 1 intentional effect dependency (camera focus runs only on a new focus request), 1 setState in
+  an effect reacting to the shared focus store. Left as is.
+
+## Definition of Done (§11)
+
+| Requirement | Status |
+|---|---|
+| README alone: start Postgres, migrations, seed, backend, ML service, frontend | ✅ README → setup + run (migrations and seed run on first API start; manual `dotnet ef database update` documented) |
+| Scenario A (remote inspection) | ✅ verified in browser (M5) and by smoke script |
+| Scenario B (machine anomaly → 3D → charts → ML → maintenance → workflow → PDF) | ✅ verified in browser (M3–M7) and by smoke script |
+| Scenario C (tile quality: MODEL NOT CONFIGURED / sample mode) | ✅ smoke script + UI tests; real-model path tested in pytest with a tiny ONNX model |
+| Scenario D (assistant) | ⚠️ not-configured path ✅; **with-key path not run** — no `ANTHROPIC_API_KEY` on this machine (tool loop covered by tests with a scripted LLM) |
+| All automated tests pass, results recorded | ✅ table above |
+| docs: architecture, troubleshooting, demo script, ML evaluation, real-world list | ✅ `docs/` |
+
+## Remaining limitations (overall)
+
+- Assistant not exercised against the real Claude API (needs a key).
+- No embedding provider implementation (keyword search only); no tile model shipped.
+- Swagger UI has no "Authorize" button (use the frontend or curl with a bearer token for writes).
+- Single-table readings without retention/partitioning; the simulator adds ~850k rows per day while running.
+- 3D rendering is checked manually (no WebGL in jsdom); no Playwright test (optional in the spec).
