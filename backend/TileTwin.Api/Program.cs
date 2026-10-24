@@ -71,6 +71,7 @@ builder.Services.AddScoped<TileInspectionService>();
 // No embedding provider ships with the demo: knowledge search uses PostgreSQL full-text search.
 builder.Services.AddSingleton<IEmbeddingProvider, NotConfiguredEmbeddingProvider>();
 builder.Services.AddScoped<KnowledgeService>();
+builder.Services.AddScoped<UserAdminService>();
 builder.Services.AddScoped<WorkflowRunner>();
 
 // Rate limits on expensive endpoints (per signed-in user, else per IP).

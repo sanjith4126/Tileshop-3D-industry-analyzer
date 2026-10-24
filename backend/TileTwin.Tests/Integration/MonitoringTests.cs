@@ -83,7 +83,7 @@ public class MonitoringTests(ApiFactory factory)
         var engine = scope.ServiceProvider.GetRequiredService<SimulationEngine>();
         var now = DateTime.UtcNow;
 
-        var written = await engine.TickAsync(now, backfill: false);
+        var written = (await engine.TickAsync(now, SimulationEngine.Backfill.None)).Written;
 
         var atNow = await db.SensorReadings.Where(r => r.TimestampUtc == now).ToListAsync();
         Assert.Equal(written, atNow.Count);
@@ -93,5 +93,46 @@ public class MonitoringTests(ApiFactory factory)
         Assert.All(atNow, r => Assert.Equal(DataOrigin.Synthetic, r.DataOrigin));
         // HP-002 already has open alerts for its current severities, so no duplicates are opened.
         Assert.Equal(1, await db.Alerts.CountAsync(a => a.SensorId == "SENSOR-HP-002-VIB" && a.Severity == AlertSeverity.Critical));
+    }
+
+    [Fact]
+    public async Task Simulator_backfills_a_gap_at_one_minute_resolution()
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = factory.CreateDbContext(scope);
+        var engine = scope.ServiceProvider.GetRequiredService<SimulationEngine>();
+        var start = DateTime.UtcNow;
+        start = new DateTime(start.Ticks - start.Ticks % TimeSpan.TicksPerSecond, DateTimeKind.Utc); // PostgreSQL stores microseconds
+        await engine.TickAsync(start, SimulationEngine.Backfill.None);
+        var later = start.AddMinutes(10);                 // e.g. the PC slept for 10 minutes
+        try
+        {
+            var r = await engine.TickAsync(later, SimulationEngine.Backfill.SinceLast);
+            var minutes = await db.SensorReadings.Where(x => x.SensorId == "SENSOR-HP-001-PRES" && x.TimestampUtc > start && x.TimestampUtc <= later)
+                .Select(x => x.TimestampUtc).ToListAsync();
+            Assert.Equal(10, minutes.Count);              // 9 backfilled minutes + the live point
+            Assert.Equal(46 * 10, r.Written);
+        }
+        finally
+        {
+            await db.SensorReadings.Where(x => x.TimestampUtc > start).ExecuteDeleteAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Startup_hole_scan_fills_missing_minutes_inside_history()
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = factory.CreateDbContext(scope);
+        var engine = scope.ServiceProvider.GetRequiredService<SimulationEngine>();
+        var now = DateTime.UtcNow;
+        var holeFrom = now.AddMinutes(-40);
+        var holeTo = now.AddMinutes(-30);
+        await db.SensorReadings.Where(r => r.TimestampUtc > holeFrom && r.TimestampUtc < holeTo).ExecuteDeleteAsync();
+
+        await engine.TickAsync(now, SimulationEngine.Backfill.Holes);
+
+        var refilled = await db.SensorReadings.CountAsync(r => r.SensorId == "SENSOR-HP-001-PRES" && r.TimestampUtc > holeFrom && r.TimestampUtc < holeTo);
+        Assert.InRange(refilled, 9, 10);
     }
 }

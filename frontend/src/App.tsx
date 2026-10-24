@@ -7,6 +7,7 @@ import InspectionPage from './pages/inspection/InspectionPage'
 import ObservationDetailPage from './pages/inspection/ObservationDetailPage'
 import MachineDetailPage from './pages/monitoring/MachineDetailPage'
 import MonitoringPage from './pages/monitoring/MonitoringPage'
+import AdminPage from './pages/admin/AdminPage'
 import AssistantPage from './pages/assistant/AssistantPage'
 import KnowledgePage from './pages/knowledge/KnowledgePage'
 import PlaceholderPage from './pages/PlaceholderPage'
@@ -34,7 +35,7 @@ export default function App() {
         <Route path="knowledge" element={<KnowledgePage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="reports/:id" element={<ReportViewPage />} />
-        <Route path="admin" element={<PlaceholderPage title="Administration" milestone={11} />} />
+        <Route path="admin" element={<AdminPage />} />
         <Route path="*" element={<PlaceholderPage title="Page not found" />} />
       </Route>
     </Routes>

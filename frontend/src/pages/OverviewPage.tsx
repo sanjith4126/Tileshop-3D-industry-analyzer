@@ -1,25 +1,28 @@
+import type { ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { useHealth, useMachines } from '../api/hooks'
+import { useMachines } from '../api/hooks'
 import type { MachineStatus } from '../api/types'
 import { DemoBadge, EmptyState, ErrorState, Loading, Panel } from '../components/States'
 import { StatusBadge } from '../components/StatusBadge'
 import { STATUS_META, STATUS_ORDER, formatUtc } from '../lib/status'
 import { focusEntity } from '../store/focus'
+import { ConfigStatus, useOverview } from './OverviewData'
 
-function ConfigRow({ label, ok, okText, offText }: { label: string; ok: boolean | null; okText: string; offText: string }) {
-  const tone = ok == null ? 'text-slate-400' : ok ? 'text-green-300' : 'text-amber-300'
+function Tile({ to, label, value, sub, tone }: { to: string; label: string; value: ReactNode; sub?: ReactNode; tone?: string }) {
   return (
-    <li className="flex justify-between gap-4 border-t border-slate-800/70 px-3 py-1.5 text-xs first:border-0">
-      <span className="text-slate-400">{label}</span>
-      <span className={`font-semibold ${tone}`}>{ok == null ? '…' : ok ? okText : offText}</span>
-    </li>
+    <Link to={to} className="rounded-lg border border-slate-800 bg-slate-900/70 p-3 hover:border-slate-600">
+      <p className="text-xs text-slate-400">{label}</p>
+      <p className={`mt-1 text-2xl font-semibold tabular-nums ${tone ?? ''}`}>{value}</p>
+      {sub && <p className="mt-0.5 truncate text-xs text-slate-400">{sub}</p>}
+    </Link>
   )
 }
 
 export default function OverviewPage() {
   const machines = useMachines()
-  const health = useHealth()
+  const overview = useOverview()
   const navigate = useNavigate()
+  const o = overview.data
 
   const showIn3D = (id: string) => {
     focusEntity(id)
@@ -30,14 +33,13 @@ export default function OverviewPage() {
   const attention = (machines.data ?? [])
     .filter((m) => m.status !== 'Normal')
     .sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status))
-  const f = health.data?.features
 
   return (
     <div className="space-y-4 p-5">
       <header className="flex items-center gap-3">
         <h1 className="text-xl font-semibold">Overview</h1>
         <DemoBadge />
-        {health.data?.demoData && <span className="text-xs text-slate-500">Seeded {formatUtc(health.data.demoData.seededUtc)}</span>}
+        {o?.config.demoData && <span className="text-xs text-slate-500">Seeded {formatUtc(o.config.demoData.seededUtc)}</span>}
       </header>
 
       {machines.isError ? <ErrorState error={machines.error} onRetry={() => machines.refetch()} /> : (
@@ -54,6 +56,17 @@ export default function OverviewPage() {
           ))}
         </section>
       )}
+
+      <section aria-label="Key indicators" className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Tile to="/monitoring" label="Open threshold alerts" value={o ? o.openAlerts.total : '–'}
+          sub={o && (o.openAlerts.critical > 0 ? `${o.openAlerts.critical} critical` : 'none critical')} tone={o?.openAlerts.critical ? 'text-red-300' : undefined} />
+        <Tile to="/inspection?status=Open&priority=High" label="Open high/critical observations" value={o ? o.openHighPriorityObservations : '–'}
+          sub="Remote site inspection" tone={o?.openHighPriorityObservations ? 'text-orange-300' : undefined} />
+        <Tile to={o?.latestAnomaly ? `/predictive?machine=${o.latestAnomaly.machineId}` : '/predictive'} label="Latest ML anomaly"
+          value={o ? (o.latestAnomaly ? <span className="font-mono text-base">{o.latestAnomaly.machineId}</span> : 'None') : '–'}
+          sub={o?.latestAnomaly ? `score ${o.latestAnomaly.score.toFixed(3)} > ${o.latestAnomaly.threshold.toFixed(3)} · ${formatUtc(o.latestAnomaly.timestampUtc)}` : 'statistical, not a confirmed fault'} />
+        <Tile to="/twin" label="3D digital twin" value={<span className="text-base text-cyan-300">Open twin →</span>} sub="16 machines · 5 zones (illustrative layout)" />
+      </section>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Panel title="Machines needing attention" className="lg:col-span-2"
@@ -76,19 +89,7 @@ export default function OverviewPage() {
         </Panel>
 
         <Panel title="Configuration status">
-          {health.isError ? <ErrorState error={health.error} onRetry={() => health.refetch()} /> : (
-            <ul>
-              <ConfigRow label="Backend API" ok={health.isPending ? null : true} okText="Online" offText="Offline" />
-              <ConfigRow label="Database" ok={f ? health.data!.database === 'ok' : null} okText="Connected" offText="Unavailable" />
-              <ConfigRow label="AI assistant" ok={f ? f.ai : null} okText="Configured" offText="AI NOT CONFIGURED" />
-              <ConfigRow label="Knowledge search" ok={f ? f.embeddings : null} okText="Embeddings" offText="Keyword only" />
-              <ConfigRow label="ML service" ok={f ? health.data!.ml.available : null} okText="Reachable" offText={health.data?.ml.lastCheckedUtc ? 'ML service unavailable' : 'Not checked yet'} />
-              <ConfigRow label="Dev users" ok={f ? f.devUsers : null} okText="DEV ONLY users on" offText="None" />
-            </ul>
-          )}
-          <p className="border-t border-slate-800 px-3 py-2 text-[11px] text-slate-500">
-            Tile model status appears here once tile inspection is built.
-          </p>
+          {overview.isPending ? <Loading /> : overview.isError ? <ErrorState error={overview.error} onRetry={() => overview.refetch()} /> : <ConfigStatus config={overview.data.config} />}
         </Panel>
       </div>
     </div>

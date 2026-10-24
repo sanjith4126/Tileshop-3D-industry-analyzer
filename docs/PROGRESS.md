@@ -2,7 +2,7 @@
 
 ## Current state
 
-**Milestones 1–10 DONE (2026-10-23).** Next: Milestone 11 (Overview polish + Administration).
+**Milestones 1–11 DONE (2026-10-24).** Next: Milestone 12 (full test pass, docs, smoke checklist).
 
 ## Environment (2026-10-22, Windows 11)
 
@@ -20,8 +20,8 @@ Ports: Postgres 5434, API 5080, ML 8001, frontend 5180 (5173 is taken by another
 
 | Suite | Command | Result |
 |---|---|---|
-| Backend (xUnit, real Postgres `tiletwin_test`) | `dotnet test backend/TileTwin.slnx` | 75 passed, 0 failed (~2 min, mostly re-seeding 494k readings) |
-| Frontend (Vitest) | `npm test` | 15 passed; `npm run build` OK |
+| Backend (xUnit, real Postgres `tiletwin_test`) | `dotnet test backend/TileTwin.slnx` | 80 passed, 0 failed (~65 s, mostly re-seeding 494k readings) |
+| Frontend (Vitest) | `npm test` | 17 passed; `npm run build` OK |
 | ML (pytest) | `.venv\Scripts\python -m pytest` | 16 passed (1 harmless Starlette/httpx deprecation warning) |
 
 ## Milestone 1 — environment + skeleton ✅
@@ -255,6 +255,24 @@ health checks; `.env.example`; README.
 - No embedding provider implementation; `EMBEDDINGS__Provider` alone logs a warning and keeps keyword search.
 - Scanned PDFs (images only) yield no text — OCR is out of scope.
 
+## Milestone 11 — Overview polish + Administration ✅
+
+- `GET /api/overview`: machine status counts, open alerts (total/critical), open high/critical
+  observations, latest ML anomaly, configuration status of AI, ML service, tile model, knowledge search,
+  simulator, dev users and demo data.
+- Overview page: status tiles, indicator tiles (alerts, observations, latest anomaly, link to 3D twin),
+  machines needing attention, shared configuration panel.
+- Administration (Admin only, `api/admin/*`): user list / create (password policy ≥ 12 chars, role
+  validated) / change role / disable (cannot disable or demote yourself), audit log (latest entries),
+  simulator pause/resume, **Reset demo data** (`DemoSeeder.ResetAsync` under a lock shared with the
+  simulator so the two never interleave).
+- **Bug found and fixed**: after the PC slept overnight the simulator only backfilled at startup, so the
+  last-hour windows had gaps and the ML service (correctly) refused to score ("36 of 60 samples").
+  Now the first tick fills every missing minute of the last 7 days and each later tick fills any gap
+  since the last reading (except right after an admin pause). Verified: 715 minutes backfilled, scoring
+  resumed (14 scored, HP-002 anomalous). Both modes have integration tests.
+- No placeholder pages remain (only the 404 page).
+
 ## Next
 
-Milestone 11 — Overview polish, Administration (users, config status, simulator pause, reset demo data).
+Milestone 12 — full test pass, ARCHITECTURE / TROUBLESHOOTING docs, real-world-readiness list, smoke checklist.

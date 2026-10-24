@@ -65,7 +65,7 @@ cd frontend; npm run dev
 
 - Read endpoints are open (demo viewer). Every write endpoint requires a JWT with a suitable role
   (`Viewer`, `Inspector`, `MaintenanceEngineer`, `Admin`). Get one from `POST /api/auth/login`.
-- There is **no default admin password**. Dev users are created only when the environment is
+- There is **no default admin password**. Admins create further users in **Administration**. Dev users are created only when the environment is
   `Development` **and** `DEV_SEED_USER_PASSWORD` is set: `dev.viewer@tiletwin.local`,
   `dev.inspector@…`, `dev.maintenanceengineer@…`, `dev.admin@…` (all labelled DEV ONLY), password = that variable.
 
@@ -74,8 +74,10 @@ cd frontend; npm run dev
 On first start the API seeds a deterministic synthetic dataset (fixed random seed): 1 site, 5 zones,
 16 machines, 49 sensors, 7 days of 1-minute readings (~494k rows), 25 inspection observations,
 maintenance records and production batches. Every row is `DataOrigin = Synthetic`, `SeedBatchId = demo-v1`.
-Readings are anchored to the seed time; until the live simulator exists (Milestone 4) machines turn
-`Offline` 5 minutes after seeding, because no new readings arrive.
+Readings are anchored to the seed time. While the API runs, a simulator writes a reading per sensor
+every 5 s and continues the scripted patterns; after a restart or PC sleep it fills missing minutes so
+charts and ML windows stay complete. **Administration → Reset demo data** (Admin) deletes only
+`Synthetic` rows of the demo batch in one transaction and re-seeds; user-created rows are kept.
 
 ## Tests
 

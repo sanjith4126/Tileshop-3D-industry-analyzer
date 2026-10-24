@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { Health, MachineSummary } from './api/types'
+import type { MachineSummary } from './api/types'
+import type { Overview } from './pages/OverviewData'
 import App from './App'
 import { StatusBadge } from './components/StatusBadge'
 import { getFocus } from './store/focus'
@@ -14,14 +15,18 @@ const machine = (id: string, status: MachineSummary['status'], reasons: string[]
   model: 'Unknown (demo)', dataOrigin: 'Synthetic', lastReadingUtc: null, openAlertCount: 0,
 })
 
-const health: Health = {
-  status: 'ok', database: 'ok', demoData: null, timestampUtc: '', ml: { available: false, message: 'ML service unavailable', lastCheckedUtc: null },
-  features: { ai: false, embeddings: false, mlServiceUrl: 'http://localhost:8001', devUsers: true },
+const overview: Overview = {
+  statusCounts: {}, openAlerts: { total: 3, critical: 1 }, openHighPriorityObservations: 7, latestAnomaly: null,
+  config: {
+    ai: false, ml: { available: false, message: 'ML service unavailable', lastCheckedUtc: null },
+    tileModel: { configured: false, status: 'MODEL NOT CONFIGURED' }, knowledgeSearch: 'keyword (embeddings not configured)',
+    devUsers: true, simulatorPaused: false, demoData: null,
+  },
 }
 
 describe('shell', () => {
   it('shows the synthetic-data banner and all ten navigation entries', () => {
-    mockApi({ '/api/machines': [], '/api/health': health })
+    mockApi({ '/api/machines': [], '/api/overview': overview })
     renderWithProviders(<App />)
     expect(screen.getByRole('note')).toHaveTextContent('DEMONSTRATION FACILITY — SYNTHETIC DATA')
     const nav = screen.getByRole('navigation', { name: 'Main' })
@@ -39,7 +44,7 @@ describe('overview', () => {
   it('counts machines by status and lists machines needing attention', async () => {
     mockApi({
       '/api/machines': [machine('MACHINE-HP-001', 'Normal'), machine('MACHINE-HP-002', 'Critical', ['Vibration 7.85 beyond critical limit']), machine('MACHINE-PUMP-002', 'Unknown')],
-      '/api/health': health,
+      '/api/overview': overview,
     })
     renderWithProviders(<App />)
 
@@ -50,7 +55,7 @@ describe('overview', () => {
   })
 
   it('"Show in 3D" requests focus on the machine', async () => {
-    mockApi({ '/api/machines': [machine('MACHINE-HP-002', 'Critical')], '/api/health': health })
+    mockApi({ '/api/machines': [machine('MACHINE-HP-002', 'Critical')], '/api/overview': overview })
     renderWithProviders(<App />)
     const before = getFocus().seq
     fireEvent.click(await screen.findByRole('button', { name: 'Show in 3D' }))
