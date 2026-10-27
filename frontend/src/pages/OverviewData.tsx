@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { Activity, BookOpen, BrainCircuit, Database, Grid3x3, Server, Sparkles, Users, type LucideIcon } from 'lucide-react'
 import { apiGet } from '../api/client'
 import { POLL_MS } from '../api/hooks'
 import { formatUtc } from '../lib/status'
@@ -13,39 +14,53 @@ export interface OverviewConfig {
   demoData: { seedBatchId: string; anchorUtc: string; seededUtc: string } | null
 }
 
+export interface ProductionDay { day: string; units: number; rejected: number; ratePercent: number }
+
 export interface Overview {
   statusCounts: Record<string, number>
   openAlerts: { total: number; critical: number }
   openHighPriorityObservations: number
   latestAnomaly: { machineId: string; score: number; threshold: number; timestampUtc: string; modelVersion: string } | null
+  production?: { units: number; rejected: number; ratePercent: number; days: ProductionDay[] }
   config: OverviewConfig
 }
 
 export const useOverview = () =>
   useQuery({ queryKey: ['overview'], queryFn: ({ signal }) => apiGet<Overview>('/api/overview', signal), refetchInterval: POLL_MS })
 
-function Row({ label, ok, text }: { label: string; ok: boolean | null; text: string }) {
-  const tone = ok == null ? 'text-slate-400' : ok ? 'text-green-300' : 'text-amber-300'
+type Tone = 'ok' | 'warn' | 'neutral'
+const TONE: Record<Tone, string> = {
+  ok: 'bg-ok/10 text-ok ring-ok/30',
+  warn: 'bg-warn/12 text-warn ring-warn/35',
+  neutral: 'bg-raised text-muted ring-line-strong',
+}
+
+function Row({ Icon, label, tone, text }: { Icon: LucideIcon; label: string; tone: Tone; text: string }) {
   return (
-    <li className="flex justify-between gap-4 border-t border-slate-800/70 px-3 py-1.5 text-xs first:border-0">
-      <span className="text-slate-400">{label}</span>
-      <span className={`text-right font-semibold ${tone}`}>{text}</span>
+    <li className="flex items-center gap-3 px-4 py-2.5">
+      <Icon className="size-4 shrink-0 text-subtle" strokeWidth={1.75} aria-hidden="true" />
+      <span className="min-w-0 flex-1 text-[13px] text-muted">{label}</span>
+      <span className={`max-w-[60%] truncate rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${TONE[tone]}`} title={text}>{text}</span>
     </li>
   )
 }
 
 /** Configuration status of every optional component (shared by Overview and Administration). */
 export function ConfigStatus({ config: c }: { config: OverviewConfig }) {
+  const mlChecked = !!c.ml.lastCheckedUtc
   return (
-    <ul>
-      <Row label="Backend API / database" ok text="Online" />
-      <Row label="AI assistant" ok={c.ai} text={c.ai ? 'Configured' : 'AI NOT CONFIGURED'} />
-      <Row label="ML anomaly service" ok={c.ml.lastCheckedUtc ? c.ml.available : null} text={c.ml.lastCheckedUtc ? (c.ml.available ? 'Reachable' : 'ML service unavailable') : 'Not checked yet'} />
-      <Row label="Tile defect model" ok={c.tileModel.configured} text={c.tileModel.configured ? 'Configured' : c.tileModel.status.startsWith('ML service') ? 'ML service unavailable' : 'MODEL NOT CONFIGURED'} />
-      <Row label="Knowledge search" ok={!c.knowledgeSearch.startsWith('keyword')} text={c.knowledgeSearch} />
-      <Row label="Live simulator" ok={c.simulatorPaused == null ? null : !c.simulatorPaused} text={c.simulatorPaused == null ? 'No demo data' : c.simulatorPaused ? 'Paused' : 'Running'} />
-      <Row label="Dev users" ok={null} text={c.devUsers ? 'DEV ONLY users enabled' : 'None'} />
-      <Row label="Demo data" ok={null} text={c.demoData ? `${c.demoData.seedBatchId}, seeded ${formatUtc(c.demoData.seededUtc)}` : 'Not seeded'} />
+    <ul className="divide-y divide-line/70">
+      <Row Icon={Server} label="Backend API / database" tone="ok" text="Online" />
+      <Row Icon={Sparkles} label="AI assistant" tone={c.ai ? 'ok' : 'warn'} text={c.ai ? 'Configured' : 'AI NOT CONFIGURED'} />
+      <Row Icon={BrainCircuit} label="ML anomaly service" tone={!mlChecked ? 'neutral' : c.ml.available ? 'ok' : 'warn'}
+        text={!mlChecked ? 'Not checked yet' : c.ml.available ? 'Reachable' : 'ML service unavailable'} />
+      <Row Icon={Grid3x3} label="Tile defect model" tone={c.tileModel.configured ? 'ok' : 'warn'}
+        text={c.tileModel.configured ? 'Configured' : c.tileModel.status.startsWith('ML service') ? 'ML service unavailable' : 'MODEL NOT CONFIGURED'} />
+      <Row Icon={BookOpen} label="Knowledge search" tone={c.knowledgeSearch.startsWith('keyword') ? 'neutral' : 'ok'} text={c.knowledgeSearch} />
+      <Row Icon={Activity} label="Live simulator" tone={c.simulatorPaused == null ? 'neutral' : c.simulatorPaused ? 'warn' : 'ok'}
+        text={c.simulatorPaused == null ? 'No demo data' : c.simulatorPaused ? 'Paused' : 'Running'} />
+      <Row Icon={Users} label="Dev users" tone="neutral" text={c.devUsers ? 'DEV ONLY users enabled' : 'None'} />
+      <Row Icon={Database} label="Demo data" tone="neutral" text={c.demoData ? `${c.demoData.seedBatchId} · ${formatUtc(c.demoData.seededUtc)}` : 'Not seeded'} />
     </ul>
   )
 }

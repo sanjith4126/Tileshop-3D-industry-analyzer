@@ -2,7 +2,8 @@ import { Edges, Html, useGLTF } from '@react-three/drei'
 import { Component, Suspense, useMemo, useState, type ReactNode } from 'react'
 import * as THREE from 'three'
 import type { MachineSummary } from '../api/types'
-import { STATUS_META, shortId } from '../lib/status'
+import { STATUS_META, shortId, statusHex } from '../lib/status'
+import type { ThemeColors } from '../theme'
 import { ASSETS_BASE, type ManifestEntity } from './manifest'
 import { Conveyor, HydraulicPress, InspectionStation, MODEL_HEIGHT, Motor, Pump } from './ProceduralModels'
 
@@ -38,7 +39,7 @@ function ModelOrProcedural({ id, entity }: { id: string; entity: ManifestEntity 
     <group>
       {procedural}
       <Html position={[0, 0.2, 1.2]} center>
-        <span className="rounded bg-amber-900/90 px-1 text-[9px] text-amber-200" title={`Model for ${id} failed to load`}>⚠ model fallback</span>
+        <span className="rounded bg-warn/15 px-1 text-[9px] text-warn" title={`Model for ${id} failed to load`}>model fallback</span>
       </Html>
     </group>
   )
@@ -59,14 +60,16 @@ interface Props {
   id: string
   entity: ManifestEntity
   machine: MachineSummary | undefined
+  colors: ThemeColors
   selected: boolean
   onSelect: (id: string) => void
 }
 
-export function MachineObject({ id, entity, machine, selected, onSelect }: Props) {
+export function MachineObject({ id, entity, machine, colors, selected, onSelect }: Props) {
   const [hover, setHover] = useState(false)
   const status = machine?.status ?? 'Unknown'
   const meta = STATUS_META[status]
+  const hex = statusHex(status, colors)
   const isConveyor = entity.type === 'Conveyor'
   const scale: [number, number, number] = isConveyor ? [1, 1, 1] : entity.scale
   const height = (MODEL_HEIGHT[entity.type] ?? 2) * scale[1]
@@ -88,7 +91,7 @@ export function MachineObject({ id, entity, machine, selected, onSelect }: Props
       {/* Status ring on the floor; bright and pulsing-size when selected (highlight). */}
       <mesh geometry={ringGeo} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}
         scale={ring}>
-        <meshBasicMaterial color={selected ? '#e0f2fe' : meta.color} transparent opacity={selected || hover ? 0.95 : 0.6} side={THREE.DoubleSide} />
+        <meshBasicMaterial color={selected ? colors.accent : hex} transparent opacity={selected || hover ? 0.95 : 0.6} side={THREE.DoubleSide} />
       </mesh>
 
       {/* Selection outline. */}
@@ -96,16 +99,16 @@ export function MachineObject({ id, entity, machine, selected, onSelect }: Props
         <mesh position={[0, height / 2, 0]} scale={isConveyor ? [entity.scale[0] + 0.4, height + 0.3, 1.4] : [2.9 * scale[0], height + 0.3, 2.5 * scale[2]]}>
           <boxGeometry />
           <meshBasicMaterial visible={false} />
-          <Edges color="#67e8f9" />
+          <Edges color={colors.accent} />
         </mesh>
       )}
 
       {/* Status beacon (stack light). */}
       <mesh geometry={poleGeo} position={[0, height + 0.3, 0]}>
-        <meshStandardMaterial color="#334155" />
+        <meshStandardMaterial color={colors['line-strong']} />
       </mesh>
       <mesh geometry={beaconGeo} position={[0, height + 0.7, 0]}>
-        <meshStandardMaterial color={meta.color} emissive={meta.color} emissiveIntensity={status === 'Offline' ? 0.1 : 1.4} />
+        <meshStandardMaterial color={hex} emissive={hex} emissiveIntensity={status === 'Offline' ? 0.1 : 1.4} />
       </mesh>
 
       {/* Label: icon + text, so colour is never the only indicator. Also a keyboard target. */}
@@ -115,11 +118,11 @@ export function MachineObject({ id, entity, machine, selected, onSelect }: Props
           data-twin-label
           onClick={() => onSelect(id)}
           aria-label={`${machine?.name ?? id}, status ${meta.label}`}
-          className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold whitespace-nowrap ring-1 ring-inset ${meta.className} ${
-            selected ? 'outline-2 outline-cyan-300' : ''
-          } bg-slate-950/85 focus-visible:outline-2 focus-visible:outline-cyan-300`}
+          className={`flex items-center gap-1 rounded-md bg-surface/95 px-1.5 py-0.5 font-mono text-[10px] font-medium whitespace-nowrap text-fg shadow-sm ring-1 ring-inset ring-line-strong ${
+            selected ? 'outline-2 outline-accent' : ''
+          } focus-visible:outline-2 focus-visible:outline-accent`}
         >
-          <span aria-hidden="true">{meta.icon}</span>
+          <meta.Icon aria-hidden="true" className="size-3" style={{ color: hex }} strokeWidth={2.25} />
           {shortId(id)}
         </button>
       </Html>

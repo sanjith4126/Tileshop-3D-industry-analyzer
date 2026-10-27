@@ -1,13 +1,17 @@
-/** Honest placeholder for modules that are not built yet (no fake content, no dead buttons). */
-export default function PlaceholderPage({ title, milestone }: { title: string; milestone?: number }) {
+import { Compass } from 'lucide-react'
+import { Link } from 'react-router'
+
+/** Not-found page: honest, with a way back (no dead ends). */
+export default function PlaceholderPage({ title }: { title: string }) {
   return (
-    <div className="p-5">
-      <h1 className="text-xl font-semibold">{title}</h1>
-      <p className="mt-2 max-w-prose text-sm text-slate-400">
-        {milestone
-          ? `This module is not built yet. It is scheduled for Milestone ${milestone} (see docs/PROGRESS.md).`
-          : 'There is no page at this address.'}
-      </p>
+    <div className="flex h-full items-center justify-center p-6">
+      <div className="card bg-blueprint max-w-md p-8 text-center">
+        <Compass className="mx-auto size-8 text-subtle" aria-hidden="true" />
+        <p className="num mt-3 text-5xl font-semibold text-fg">404</p>
+        <h1 className="display mt-2 text-xl font-semibold text-fg">{title}</h1>
+        <p className="mt-2 text-sm text-muted">There is no page at this address.</p>
+        <Link to="/" className="btn btn-primary mt-5">Back to Overview</Link>
+      </div>
     </div>
   )
 }

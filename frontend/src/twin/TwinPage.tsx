@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router'
 import { useMachines, useZones } from '../api/hooks'
 import { DemoBadge, ErrorState, Loading } from '../components/States'
 import { focusEntity, useFocus } from '../store/focus'
+import { useThemeColors } from '../theme'
 import { FactoryScene, type CameraApi, type FocusTarget } from './FactoryScene'
 import { MachinePanel } from './MachinePanel'
 import { useManifest } from './manifest'
@@ -15,6 +16,7 @@ export default function TwinPage() {
   const focus = useFocus()
   const [params, setParams] = useSearchParams()
   const camera = useRef<CameraApi>(null)
+  const colors = useThemeColors()
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [zoneId, setZoneId] = useState<string | null>(null)
@@ -62,6 +64,7 @@ export default function TwinPage() {
       <div className="relative min-w-0 flex-1">
         <FactoryScene
           ref={camera}
+          colors={colors}
           focusTarget={focusTarget}
           manifest={manifest.data}
           machines={machines}
@@ -72,8 +75,8 @@ export default function TwinPage() {
           onSelect={select}
         />
         <div className="pointer-events-none absolute top-3 left-3 z-30 flex flex-col gap-2">
-          <div className="pointer-events-auto flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-950/90 px-2 py-1">
-            <h1 className="text-sm font-semibold">3D Digital Twin</h1>
+          <div className="glass pointer-events-auto flex w-64 items-center justify-between gap-2 rounded-xl px-3 py-2">
+            <h1 className="display text-[15px] font-semibold">3D Digital Twin</h1>
             <DemoBadge />
           </div>
           <TwinToolbar
@@ -87,8 +90,8 @@ export default function TwinPage() {
           />
         </div>
         <div className="pointer-events-none absolute bottom-3 left-3 z-30"><StatusLegend /></div>
-        <p className="pointer-events-none absolute right-3 bottom-3 text-[10px] text-slate-500">
-          Drag: orbit · Right-drag: pan · Wheel: zoom · Tab to machine labels
+        <p className="glass pointer-events-none absolute right-3 bottom-3 rounded-lg px-2.5 py-1.5 text-[11px] text-muted">
+          Drag to orbit · right-drag to pan · scroll to zoom · Tab through machine labels
         </p>
       </div>
       {selectedId && <MachinePanel id={selectedId} onClose={() => setSelectedId(null)} />}

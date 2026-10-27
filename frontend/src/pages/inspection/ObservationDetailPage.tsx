@@ -1,11 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Box, History, ImageIcon, ListChecks, PencilLine, TriangleAlert } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { apiSend } from '../../api/client'
 import { useObservation } from '../../api/hooks'
 import type { ObservationDetail, ObservationSummary } from '../../api/types'
 import { useAuth } from '../../auth/auth'
-import { DemoBadge, ErrorState, Loading, Panel } from '../../components/States'
+import { DemoBadge, EmptyState, ErrorState, Loading, Page, PageHeader, Panel } from '../../components/States'
 import { formatUtc } from '../../lib/status'
 import { focusEntity } from '../../store/focus'
 import { PriorityBadge } from './InspectionPage'
@@ -29,32 +30,29 @@ function UpdateForm({ o }: { o: ObservationSummary }) {
       qc.invalidateQueries({ queryKey: ['inspection-zones'] })
     },
   })
-  const field = 'mt-0.5 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-sm'
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); save.mutate() }} className="grid gap-2 p-3 text-xs sm:grid-cols-2">
-      <label>Status
-        <select value={status} onChange={(e) => setStatus(e.target.value as ObservationSummary['status'])} className={field}>
+    <form onSubmit={(e) => { e.preventDefault(); save.mutate() }} className="grid gap-3 p-4 sm:grid-cols-2">
+      <label><span className="field-label">Status</span>
+        <select value={status} onChange={(e) => setStatus(e.target.value as ObservationSummary['status'])} className="input">
           {['Open', 'InProgress', 'Resolved', 'Closed'].map((s) => <option key={s}>{s}</option>)}
         </select>
       </label>
-      <label>Assigned role
-        <select value={role} onChange={(e) => setRole(e.target.value)} className={field}>
+      <label><span className="field-label">Assigned role</span>
+        <select value={role} onChange={(e) => setRole(e.target.value)} className="input">
           {ROLES.map((r) => <option key={r} value={r}>{r || '— none —'}</option>)}
         </select>
       </label>
-      <label className="sm:col-span-2">Assigned user (email)
-        <input value={user} maxLength={256} onChange={(e) => setUser(e.target.value)} className={field} />
+      <label className="sm:col-span-2"><span className="field-label">Assigned user (email)</span>
+        <input value={user} maxLength={256} onChange={(e) => setUser(e.target.value)} className="input" />
       </label>
-      <label className="sm:col-span-2">Comment
-        <textarea value={comment} maxLength={1000} rows={2} onChange={(e) => setComment(e.target.value)} className={field} />
+      <label className="sm:col-span-2"><span className="field-label">Comment</span>
+        <textarea value={comment} maxLength={1000} rows={2} onChange={(e) => setComment(e.target.value)} className="input" />
       </label>
-      <div className="flex items-center gap-2 sm:col-span-2">
-        <button type="submit" disabled={save.isPending} className="rounded bg-cyan-700 px-3 py-1.5 font-semibold hover:bg-cyan-600 disabled:opacity-50">
-          {save.isPending ? 'Saving…' : 'Save update'}
-        </button>
-        {save.isSuccess && <span className="text-green-300">Saved.</span>}
-        {save.isError && <span role="alert" className="text-red-300">{(save.error as Error).message}</span>}
+      <div className="flex items-center gap-3 text-sm sm:col-span-2">
+        <button type="submit" disabled={save.isPending} className="btn btn-primary">{save.isPending ? 'Saving…' : 'Save update'}</button>
+        {save.isSuccess && <span className="text-ok">Saved.</span>}
+        {save.isError && <span role="alert" className="text-crit">{(save.error as Error).message}</span>}
       </div>
     </form>
   )
@@ -70,70 +68,88 @@ export default function ObservationDetailPage() {
   if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />
   const { observation: o, correctiveActions, attachments, history } = q.data
   const showIn3D = (entityId: string) => { focusEntity(entityId); navigate('/twin') }
+  const facts: [string, React.ReactNode][] = [
+    ['Category', o.category],
+    ['Zone', o.zoneName],
+    ['Machine', o.machineId ? <Link key="m" to={`/monitoring/${o.machineId}`} className="link font-mono text-xs">{o.machineId}</Link> : '—'],
+    ['Raised', formatUtc(o.createdUtc)],
+    ['Inspection', q.data.inspectionTitle],
+    ['Inspector', q.data.inspectorName ?? 'unknown'],
+    ['Assigned to', o.assignedUser ?? o.assignedRole ?? 'nobody'],
+    ['Last updated', formatUtc(o.updatedUtc)],
+  ]
 
   return (
-    <div className="space-y-4 p-5">
-      <nav className="text-xs text-slate-400"><Link to="/inspection" className="hover:underline">Remote Site Inspection</Link> / {o.code}</nav>
-      <header className="flex flex-wrap items-center gap-2">
-        <h1 className="text-xl font-semibold">{o.code}</h1>
-        <PriorityBadge priority={o.priority} />
-        <span className="rounded bg-slate-800 px-2 py-0.5 text-xs">{o.status}</span>
-        {o.dataOrigin === 'Synthetic' && <DemoBadge />}
-        <div className="ml-auto flex gap-2">
-          <button onClick={() => showIn3D(o.zoneId)} className="rounded bg-slate-800 px-3 py-1.5 text-xs hover:bg-slate-700">Show zone in 3D</button>
-          {o.machineId && <button onClick={() => showIn3D(o.machineId!)} className="rounded bg-slate-800 px-3 py-1.5 text-xs hover:bg-slate-700">Show {o.machineId} in 3D</button>}
-        </div>
-      </header>
-      <p className="max-w-3xl text-base">{o.description}</p>
-      <p className="text-xs text-slate-400">
-        {o.category} · {o.zoneName}{o.machineId && <> · <Link to={`/monitoring/${o.machineId}`} className="text-cyan-300 hover:underline">{o.machineId}</Link></>}
-        {' '}· raised {formatUtc(o.createdUtc)} during “{q.data.inspectionTitle}” by {q.data.inspectorName ?? 'unknown'}
-        {' '}· assigned to {o.assignedUser ?? o.assignedRole ?? 'nobody'}
-      </p>
+    <Page>
+      <PageHeader
+        eyebrow={<><Link to="/inspection" className="link">Remote Site Inspection</Link> / <span className="font-mono normal-case">{o.code}</span></>}
+        title={<span className="font-mono">{o.code}</span>}
+        badges={<><PriorityBadge priority={o.priority} /><span className="chip">{o.status}</span>{o.dataOrigin === 'Synthetic' && <DemoBadge />}</>}
+        actions={<>
+          <button onClick={() => showIn3D(o.zoneId)} className="btn btn-secondary"><Box className="size-4" aria-hidden="true" />Show zone in 3D</button>
+          {o.machineId && <button onClick={() => showIn3D(o.machineId!)} className="btn btn-secondary"><Box className="size-4" aria-hidden="true" />Show {o.machineId} in 3D</button>}
+        </>}
+      />
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Panel title="Corrective actions">
-          {correctiveActions.length === 0 ? <p className="p-3 text-sm text-slate-500">No corrective actions.</p> : (
+      <section className="card p-5">
+        <p className="max-w-4xl text-base leading-relaxed text-fg">{o.description}</p>
+        <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 border-t border-line pt-4 text-sm md:grid-cols-4">
+          {facts.map(([k, v]) => <div key={k}><dt className="text-xs text-subtle">{k}</dt><dd className="mt-0.5 text-fg">{v}</dd></div>)}
+        </dl>
+      </section>
+
+      <div className="grid items-start gap-5 lg:grid-cols-2">
+        <Panel title="Corrective actions" icon={<ListChecks className="size-4" />}>
+          {correctiveActions.length === 0 ? <EmptyState>No corrective actions.</EmptyState> : (
             <ul>
               {correctiveActions.map((a) => (
-                <li key={a.id} className="border-t border-slate-800/70 px-3 py-2 text-sm first:border-0">
-                  <p>{a.description}</p>
-                  <p className="text-xs text-slate-400">
-                    {a.status} · {a.assignedRole ?? 'unassigned'} · due {formatUtc(a.dueUtc)}
+                <li key={a.id} className="border-b border-line/70 px-4 py-3 text-sm last:border-0">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-fg">{a.description}</p>
+                    <span className="chip shrink-0">{a.status}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted">
+                    {a.assignedRole ?? 'unassigned'} · due {formatUtc(a.dueUtc)}
                     {a.completedUtc && ` · done ${formatUtc(a.completedUtc)}`}
-                    {a.overdue && <span className="ml-1 font-semibold text-red-300">⚠ overdue</span>}
+                    {a.overdue && <span className="ml-2 inline-flex items-center gap-1 font-semibold text-crit"><TriangleAlert className="size-3.5" aria-hidden="true" />overdue</span>}
                   </p>
                 </li>
               ))}
             </ul>
           )}
         </Panel>
-        <Panel title="History">
-          <ol className="space-y-1.5 p-3 text-xs">
+        <Panel title="History" icon={<History className="size-4" />}>
+          <ol className="relative m-4 space-y-3 border-l border-line pl-5 text-xs">
             {history.map((h, i) => (
-              <li key={i}><span className="text-slate-500">{formatUtc(h.timestampUtc)}</span> · <span className="font-semibold">{h.action}</span>{h.details && ` — ${h.details}`} <span className="text-slate-500">({h.userName})</span></li>
+              <li key={i} className="relative">
+                <span className="absolute top-1 -left-6.5 size-2.5 rounded-full border-2 border-surface bg-line-strong" aria-hidden="true" />
+                <p className="text-subtle">{formatUtc(h.timestampUtc)} · {h.userName}</p>
+                <p className="text-fg"><span className="font-semibold">{h.action}</span>{h.details && ` — ${h.details}`}</p>
+              </li>
             ))}
           </ol>
         </Panel>
       </div>
 
-      <Panel title="Attachments">
-        {attachments.length === 0 ? <p className="p-3 text-sm text-slate-500">No attachments.</p> : (
-          <div className="flex flex-wrap gap-3 p-3">
+      <Panel title="Attachments" icon={<ImageIcon className="size-4" />}>
+        {attachments.length === 0 ? <EmptyState>No attachments.</EmptyState> : (
+          <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
             {attachments.map((a) => (
-              <figure key={a.id} className="w-80">
-                <img src={a.url} alt={`${a.caption}${a.isPlaceholder ? ' (synthetic placeholder image, not a real photograph)' : ''}`} className="w-full rounded border border-slate-700" />
-                <figcaption className="mt-1 text-xs text-slate-400">{a.caption}{a.isPlaceholder && <span className="ml-1 font-semibold text-amber-300">· SYNTHETIC PLACEHOLDER</span>}</figcaption>
+              <figure key={a.id} className="overflow-hidden rounded-lg border border-line bg-sunken">
+                <img src={a.url} alt={`${a.caption}${a.isPlaceholder ? ' (synthetic placeholder image, not a real photograph)' : ''}`} className="w-full" />
+                <figcaption className="flex flex-wrap items-center gap-2 px-3 py-2 text-xs text-muted">
+                  {a.caption}{a.isPlaceholder && <span className="font-semibold text-warn">SYNTHETIC PLACEHOLDER</span>}
+                </figcaption>
               </figure>
             ))}
           </div>
         )}
       </Panel>
 
-      <Panel title="Update status / assignment">
+      <Panel title="Update status / assignment" icon={<PencilLine className="size-4" />}>
         {hasRole('Inspector', 'Admin') ? <UpdateForm key={o.updatedUtc} o={o} />
-          : <p className="p-3 text-sm text-slate-500">Sign in as Inspector or Admin to update status or assignment.</p>}
+          : <EmptyState icon={false}>Sign in as Inspector or Admin to update status or assignment.</EmptyState>}
       </Panel>
-    </div>
+    </Page>
   )
 }

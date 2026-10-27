@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { MachineSummary } from './api/types'
 import type { Overview } from './pages/OverviewData'
@@ -34,9 +34,9 @@ describe('shell', () => {
   })
 
   it('status badge shows icon and text, not colour alone', () => {
-    render(<StatusBadge status="Critical" />)
+    const { container } = render(<StatusBadge status="Critical" />)
     expect(screen.getByText('Critical')).toBeInTheDocument()
-    expect(screen.getByText('‼')).toHaveAttribute('aria-hidden', 'true')
+    expect(container.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
   })
 })
 
@@ -48,9 +48,11 @@ describe('overview', () => {
     })
     renderWithProviders(<App />)
 
-    expect(await screen.findByText('MACHINE-HP-002')).toBeInTheDocument()
-    expect(screen.getByText('Vibration 7.85 beyond critical limit')).toBeInTheDocument()
-    expect(screen.queryByText('MACHINE-HP-001')).not.toBeInTheDocument()
+    const attention = within(await screen.findByRole('region', { name: 'Needs attention' }))
+    expect((await attention.findAllByText('MACHINE-HP-002')).length).toBeGreaterThan(0) // fixture name === id
+    expect(attention.getByText('Vibration 7.85 beyond critical limit')).toBeInTheDocument()
+    expect(attention.queryAllByText('MACHINE-HP-001')).toHaveLength(0)
+    expect(screen.getByRole('link', { name: '1 Critical' })).toBeInTheDocument()
     expect(await screen.findByText('AI NOT CONFIGURED')).toBeInTheDocument()
   })
 

@@ -1,4 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
+import { Box, FileText } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { apiSend } from '../../api/client'
 import type { InspectionSummary } from '../../api/types'
@@ -17,28 +18,32 @@ export function SummaryPanel({ zoneId, zoneName }: { zoneId: string | null; zone
   const s = gen.data
 
   return (
-    <div className="space-y-2 p-3 text-sm">
-      <button onClick={() => gen.mutate()} disabled={gen.isPending} className="rounded bg-cyan-700 px-3 py-1.5 text-xs font-semibold hover:bg-cyan-600 disabled:opacity-50">
-        {gen.isPending ? 'Generating…' : `Generate inspection summary — ${zoneName}`}
-      </button>
+    <div className="space-y-3 p-4 text-sm">
+      <div className="flex flex-wrap items-center gap-3">
+        <button onClick={() => gen.mutate()} disabled={gen.isPending} className="btn btn-primary">
+          <FileText className="size-4" aria-hidden="true" />
+          {gen.isPending ? 'Generating…' : `Generate inspection summary — ${zoneName}`}
+        </button>
+        {!s && <span className="text-xs text-subtle">Deterministic summary computed from inspection records.</span>}
+      </div>
       {gen.isError && <ErrorState error={gen.error} />}
       {s && (
-        <article aria-label="Inspection summary" className="space-y-1.5 rounded border border-slate-800 bg-slate-950 p-3">
-          <header className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+        <article aria-label="Inspection summary" className="space-y-1.5 rounded-lg border border-line bg-sunken p-4">
+          <header className="mb-2 flex flex-wrap items-center gap-2 text-xs text-muted">
             <span>{s.scope} · generated {formatUtc(s.generatedUtc)}</span>
             {s.containsSyntheticData && <DemoBadge />}
           </header>
-          {s.lines.map((l, i) => <p key={i} className={i === s.lines.length - 1 ? 'text-xs text-slate-500' : ''}>{l}</p>)}
+          {s.lines.map((l, i) => <p key={i} className={i === s.lines.length - 1 ? 'text-xs text-subtle' : 'text-fg'}>{l}</p>)}
           {s.focusEntityIds.length > 0 && (
-            <div className="flex flex-wrap gap-1 pt-1">
+            <div className="flex flex-wrap gap-1.5 pt-2">
               {s.focusEntityIds.map((id) => (
-                <button key={id} onClick={() => { focusEntity(id); navigate('/twin') }} className="rounded bg-slate-800 px-2 py-0.5 text-xs hover:bg-slate-700">
-                  Show {id} in 3D
+                <button key={id} onClick={() => { focusEntity(id); navigate('/twin') }} className="btn btn-secondary btn-sm">
+                  <Box className="size-3.5" aria-hidden="true" />Show {id} in 3D
                 </button>
               ))}
             </div>
           )}
-          <p className="text-[10px] text-slate-500">Computed from records by fixed rules (no AI). AI wording can be added when the assistant is configured.</p>
+          <p className="pt-1 text-[10px] text-subtle">Computed from records by fixed rules (no AI). AI wording can be added when the assistant is configured.</p>
         </article>
       )}
     </div>

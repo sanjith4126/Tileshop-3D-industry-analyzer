@@ -11,6 +11,7 @@
 | Frontend: "Port 5180 is already in use" | Another Vite app | Stop it, or change `server.port` in `frontend/vite.config.ts` |
 | Every machine shows **Offline** | The API (simulator) is not running, or the simulator is paused | Start the API; Administration → Resume simulator |
 | "ML service unavailable" | ML service not running or wrong `ML_SERVICE_URL` | `cd ml-service; .venv\Scripts\python -m uvicorn app.main:app --port 8001` |
+| Overview / Tile Quality take ~2 s to load (Windows) | `ML_SERVICE_URL` uses `localhost`: Windows tries IPv6 `::1` first, the ML service listens on IPv4 only | Use `ML_SERVICE_URL=http://127.0.0.1:8001` (the default) and restart the API |
 | No ML score / "insufficient data" | Fewer than 45 of the last 60 minutes have readings | Wait a few minutes; restarting the API fills missing minutes |
 | Tile upload: **MODEL NOT CONFIGURED** | No ONNX model configured (expected in the demo) | See `docs/TILE-MODEL.md`; set `TILE_MODEL_PATH` and restart the ML service |
 | Assistant: **AI NOT CONFIGURED** | No AI key set | Set `GROQ_API_KEY` + `LLM__Provider=groq`, or `ANTHROPIC_API_KEY` + `LLM__Model`, in `.env`; restart the API |

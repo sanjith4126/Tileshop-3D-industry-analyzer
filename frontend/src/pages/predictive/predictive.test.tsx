@@ -18,7 +18,7 @@ it('shows "ML service unavailable" and no score when the service is down', () =>
 it('explains an anomaly score in plain English with the largest deviation', () => {
   render(<ScoreCard score={score} ml={{ available: true, message: 'ok', lastCheckedUtc: null }} />)
   expect(screen.getByText('0.610')).toBeInTheDocument()
-  expect(screen.getByText('! Statistical anomaly')).toBeInTheDocument()
+  expect(screen.getByText('Statistical anomaly')).toBeInTheDocument()
   expect(screen.getByText(/not a diagnosis, and not a prediction/)).toBeInTheDocument()
   expect(screen.getByText('VIB_mean')).toBeInTheDocument()
 })

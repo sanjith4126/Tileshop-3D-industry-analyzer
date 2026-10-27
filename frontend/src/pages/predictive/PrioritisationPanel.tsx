@@ -1,4 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
+import { Box, Download, FileText, ListOrdered, Play } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { apiSend } from '../../api/client'
 import type { MachineStatus } from '../../api/types'
@@ -27,39 +28,53 @@ export function PrioritisationPanel() {
       { zoneId: null, createReport, aiWording: true }, session?.token ?? null),
   })
   const out = run.data?.output
+  const ranked = out?.ranking.filter((r) => r.score > 0) ?? []
+  const top = Math.max(1, ...ranked.map((r) => r.score))
 
   return (
-    <Panel title="Maintenance prioritisation workflow" actions={session && (
-      <div className="flex gap-1">
-        <button onClick={() => run.mutate(false)} disabled={run.isPending} className="rounded bg-cyan-700 px-2 py-0.5 text-xs font-semibold hover:bg-cyan-600 disabled:opacity-50">{run.isPending ? 'Running…' : 'Run'}</button>
-        <button onClick={() => run.mutate(true)} disabled={run.isPending} className="rounded bg-slate-800 px-2 py-0.5 text-xs hover:bg-slate-700 disabled:opacity-50">Run + PDF report</button>
-      </div>
+    <Panel title="Maintenance prioritisation workflow" icon={<ListOrdered className="size-4" />} actions={session && (
+      <>
+        <button onClick={() => run.mutate(false)} disabled={run.isPending} className="btn btn-primary btn-sm"><Play className="size-3.5" aria-hidden="true" />{run.isPending ? 'Running…' : 'Run'}</button>
+        <button onClick={() => run.mutate(true)} disabled={run.isPending} className="btn btn-secondary btn-sm"><FileText className="size-3.5" aria-hidden="true" />Run + PDF report</button>
+      </>
     )}>
-      {!session && <p className="p-3 text-xs text-slate-400">Sign in (any role) to run the workflow.</p>}
+      {!out && !run.isError && (
+        <p className="px-4 py-3 text-sm text-muted">
+          Ranks machines by a documented scoring rule (alerts + readings + anomaly score + maintenance history) and explains every point.
+          {!session && <span className="text-subtle"> Sign in (any role) to run the workflow.</span>}
+        </p>
+      )}
       {run.isError && <ErrorState error={run.error} />}
-      {run.data?.status === 'Failed' && <p role="alert" className="p-3 text-sm text-red-300">Workflow failed: {run.data.error}</p>}
+      {run.data?.status === 'Failed' && <p role="alert" className="p-4 text-sm text-crit">Workflow failed: {run.data.error}</p>}
       {out && (
-        <div className="space-y-2 p-3 text-sm">
-          <p>{out.aiWording ?? out.recommendation}</p>
-          {out.aiWording && <p className="text-[11px] text-slate-500">Reworded by AI from the deterministic recommendation: “{out.recommendation}”</p>}
-          <table className="w-full text-xs">
-            <thead className="text-left text-slate-500"><tr><th className="py-1 font-normal">#</th><th className="font-normal">Machine</th><th className="font-normal">Status</th><th className="font-normal">Score</th><th className="font-normal">Band / factors</th><th /></tr></thead>
-            <tbody>
-              {out.ranking.filter((r) => r.score > 0).map((r) => (
-                <tr key={r.machineId} className="border-t border-slate-800/70 align-top">
-                  <td className="py-1.5">{r.rank}</td>
-                  <td><span className="font-mono">{r.machineId}</span><br /><span className="text-slate-400">{r.name}</span></td>
-                  <td><StatusBadge status={r.status} /></td>
-                  <td className="text-base font-semibold tabular-nums">{r.score}</td>
-                  <td><p className="font-semibold">{r.band}</p><ul className="text-slate-400">{r.factors.map((f) => <li key={f.factor}>+{f.points} {f.factor}</li>)}</ul></td>
-                  <td><button onClick={() => { focusEntity(r.machineId); navigate('/twin') }} className="rounded bg-slate-800 px-2 py-0.5 hover:bg-slate-700">3D</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p className="text-xs text-slate-500">{out.ranking.filter((r) => r.score === 0).length} machine(s) score 0 (routine). Excluded: {out.excluded.join(', ') || 'none'}.</p>
-          {out.reportId && <a href={`/api/reports/${out.reportId}/pdf`} download className="inline-block rounded bg-cyan-700 px-3 py-1 text-xs font-semibold hover:bg-cyan-600">Download PDF report</a>}
-          <p className="text-xs text-amber-200">{out.reviewLabel}</p>
+        <div className="space-y-3 p-4 text-sm">
+          <p className="text-fg">{out.aiWording ?? out.recommendation}</p>
+          {out.aiWording && <p className="text-[11px] text-subtle">Reworded by AI from the deterministic recommendation: “{out.recommendation}”</p>}
+          <div className="overflow-x-auto rounded-lg border border-line">
+            <table className="data-table">
+              <thead><tr><th>#</th><th>Machine</th><th>Status</th><th>Score</th><th>Band · factors</th><th><span className="sr-only">Actions</span></th></tr></thead>
+              <tbody>
+                {ranked.map((r) => (
+                  <tr key={r.machineId} className="align-top">
+                    <td className="num text-muted">{r.rank}</td>
+                    <td><span className="font-mono text-xs text-fg">{r.machineId}</span><span className="block text-xs text-muted">{r.name} · {r.zoneName}</span></td>
+                    <td><StatusBadge status={r.status} /></td>
+                    <td className="w-36">
+                      <span className="num text-base font-semibold text-fg">{r.score}</span>
+                      <div className="mt-1 h-1.5 rounded-full bg-line" aria-hidden="true"><div className="h-full rounded-full bg-accent" style={{ width: `${(r.score / top) * 100}%` }} /></div>
+                    </td>
+                    <td className="text-xs"><p className="font-semibold text-fg">{r.band}</p><ul className="text-muted">{r.factors.map((f) => <li key={f.factor}><span className="num">+{f.points}</span> {f.factor}</li>)}</ul></td>
+                    <td><button onClick={() => { focusEntity(r.machineId); navigate('/twin') }} className="btn btn-ghost btn-sm" aria-label={`Show ${r.machineId} in 3D`}><Box className="size-3.5" aria-hidden="true" />3D</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-subtle">{out.ranking.filter((r) => r.score === 0).length} machine(s) score 0 (routine). Excluded: {out.excluded.join(', ') || 'none'}.</p>
+          <div className="flex flex-wrap items-center gap-3">
+            {out.reportId && <a href={`/api/reports/${out.reportId}/pdf`} download className="btn btn-primary btn-sm"><Download className="size-3.5" aria-hidden="true" />Download PDF report</a>}
+            <p className="text-xs font-medium text-warn">{out.reviewLabel}</p>
+          </div>
         </div>
       )}
     </Panel>

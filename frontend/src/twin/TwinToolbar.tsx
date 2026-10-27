@@ -1,6 +1,7 @@
+import { Maximize2, RotateCcw, Search } from 'lucide-react'
 import { useState } from 'react'
 import type { MachineStatus, MachineSummary, Zone } from '../api/types'
-import { STATUS_META } from '../lib/status'
+import { STATUS_META, statusVar } from '../lib/status'
 
 interface Props {
   machines: MachineSummary[]
@@ -26,40 +27,40 @@ export function TwinToolbar({ machines, zones, hiddenZones, onToggleZone, onSear
     if (hit) onSearch(hit.id)
   }
 
-  const btn = 'rounded bg-slate-800 px-2.5 py-1 text-xs hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-cyan-400'
-
   return (
-    <div className="pointer-events-auto flex flex-col gap-2 rounded-lg border border-slate-800 bg-slate-950/90 p-2 text-xs shadow-lg">
-      <form onSubmit={submit} className="flex gap-1" role="search">
+    <div className="glass pointer-events-auto flex w-64 flex-col gap-3 rounded-xl p-3 text-xs">
+      <form onSubmit={submit} className="relative" role="search">
         <label htmlFor="twin-search" className="sr-only">Search machines or zones</label>
+        <Search className="pointer-events-none absolute top-2 left-2.5 size-4 text-subtle" aria-hidden="true" />
         <input
           id="twin-search"
           list="twin-entities"
           value={query}
           onChange={(e) => { setQuery(e.target.value); setNotFound(false) }}
-          placeholder="Search e.g. HP-002, Glazing…"
-          className="w-52 rounded border border-slate-700 bg-slate-900 px-2 py-1 placeholder:text-slate-500 focus:border-cyan-500 focus:outline-none"
+          placeholder="Find machine or zone…"
+          className="input pl-8"
         />
         <datalist id="twin-entities">
           {machines.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
           {zones.map((z) => <option key={z.id} value={z.name} />)}
         </datalist>
-        <button type="submit" className={btn}>Find</button>
+        <button type="submit" className="sr-only">Find</button>
       </form>
-      {notFound && <p role="alert" className="text-amber-300">No machine or zone matches “{query}”.</p>}
+      {notFound && <p role="alert" className="-mt-1 text-warn">No machine or zone matches “{query}”.</p>}
 
-      <div className="flex gap-1">
-        <button onClick={onReset} className={btn}>Reset camera</button>
-        <button onClick={onFit} className={btn}>Fit to factory</button>
+      <div className="grid grid-cols-2 gap-1.5">
+        <button onClick={onReset} className="btn btn-secondary btn-sm"><RotateCcw className="size-3.5" aria-hidden="true" />Reset camera</button>
+        <button onClick={onFit} className="btn btn-secondary btn-sm"><Maximize2 className="size-3.5" aria-hidden="true" />Fit to factory</button>
       </div>
 
       <fieldset>
-        <legend className="mb-1 text-[10px] tracking-wider text-slate-500 uppercase">Zones</legend>
-        <div className="flex flex-col gap-0.5">
+        <legend className="eyebrow mb-1.5">Zones</legend>
+        <div className="flex flex-col gap-1">
           {zones.map((z) => (
-            <label key={z.id} className="flex cursor-pointer items-center gap-1.5">
-              <input type="checkbox" checked={!hiddenZones.has(z.id)} onChange={() => onToggleZone(z.id)} className="accent-cyan-500" />
-              {z.name}
+            <label key={z.id} className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-fg hover:bg-raised">
+              <input type="checkbox" checked={!hiddenZones.has(z.id)} onChange={() => onToggleZone(z.id)} className="size-3.5 accent-accent-strong" />
+              <span className="flex-1 truncate">{z.name}</span>
+              <span className="num text-subtle">{z.machineCount}</span>
             </label>
           ))}
         </div>
@@ -70,18 +71,20 @@ export function TwinToolbar({ machines, zones, hiddenZones, onToggleZone, onSear
 
 export function StatusLegend() {
   return (
-    <div className="pointer-events-auto rounded-lg border border-slate-800 bg-slate-950/90 p-2 text-xs" aria-label="Status legend">
-      <p className="mb-1 text-[10px] tracking-wider text-slate-500 uppercase">Machine status</p>
-      <ul className="space-y-0.5">
-        {(Object.keys(STATUS_META) as MachineStatus[]).map((s) => (
-          <li key={s} className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: STATUS_META[s].color }} aria-hidden="true" />
-            <span aria-hidden="true" className="w-3 text-center">{STATUS_META[s].icon}</span>
-            {STATUS_META[s].label}
-          </li>
-        ))}
+    <div className="glass pointer-events-auto rounded-xl px-3 py-2.5 text-xs" aria-label="Status legend">
+      <p className="eyebrow mb-1.5">Machine status</p>
+      <ul className="flex flex-wrap gap-x-3 gap-y-1">
+        {(Object.keys(STATUS_META) as MachineStatus[]).map((s) => {
+          const { Icon, label } = STATUS_META[s]
+          return (
+            <li key={s} className="flex items-center gap-1.5 text-fg">
+              <Icon className="size-3.5" style={{ color: statusVar(s) }} aria-hidden="true" />
+              {label}
+            </li>
+          )
+        })}
       </ul>
-      <p className="mt-1 max-w-44 text-[10px] text-slate-500">Geometry is illustrative, not to scale.</p>
+      <p className="mt-1.5 text-[10px] text-subtle">Geometry is illustrative, not to scale.</p>
     </div>
   )
 }

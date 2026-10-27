@@ -30,6 +30,6 @@ it('overview shows alert, observation and latest-anomaly indicators', async () =
   mockApi({ '/api/overview': overview, '/api/machines': [] })
   renderWithProviders(<OverviewPage />)
   expect(await screen.findByText('MACHINE-HP-002')).toBeInTheDocument()
-  expect(screen.getByText('1 critical')).toBeInTheDocument()
+  expect(screen.getByText('1 critical · 2 warning')).toBeInTheDocument()
   expect(screen.getByText('7')).toBeInTheDocument()
 })

@@ -1,10 +1,19 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TileTwin AI — Demo</title>
+    <meta name="description" content="TileTwin — digital twin, remote inspection and predictive maintenance demo for a fictional tile plant (synthetic data)." />
+    <title>TileTwin · Demonstration Facility</title>
+    <script>
+      // Apply the saved theme before first paint (no flash). Storage may be unavailable.
+      (function () {
+        var t = null
+        try { t = localStorage.getItem('tiletwin.theme') } catch (e) {}
+        document.documentElement.dataset.theme = t === 'light' ? 'light' : 'dark'
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

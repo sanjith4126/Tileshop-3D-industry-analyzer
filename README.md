@@ -84,7 +84,7 @@ python scripts/smoke.py      # 20 end-to-end checks covering Scenarios A–D
 ## Users and access
 
 - Read endpoints are open (demo viewer). Every write endpoint requires a JWT with a suitable role
-  (`Viewer`, `Inspector`, `MaintenanceEngineer`, `Admin`) — sign in from the sidebar.
+  (`Viewer`, `Inspector`, `MaintenanceEngineer`, `Admin`) — sign in with the **Sign in** button in the top bar.
 - There is **no default admin password**. DEV ONLY users exist only when the environment is
   `Development` **and** `DEV_SEED_USER_PASSWORD` is set: `dev.viewer@tiletwin.local`,
   `dev.inspector@tiletwin.local`, `dev.maintenanceengineer@tiletwin.local`, `dev.admin@tiletwin.local`.

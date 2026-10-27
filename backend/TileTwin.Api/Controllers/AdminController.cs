@@ -73,6 +73,16 @@ public class OverviewController(MachineService machines, TileTwinDbContext db, A
             .Select(a => new { a.MachineId, a.Score, a.Threshold, a.TimestampUtc, a.ModelVersion }).FirstOrDefaultAsync(ct);
         var demo = await db.DemoState.AsNoTracking().SingleOrDefaultAsync(ct);
         var tile = await tiles.StatusAsync(ct);
+        // Production quality, last 7 days (per day of batch start), from the production batch records.
+        var since = DateTime.UtcNow.Date.AddDays(-6);
+        var batches = await db.ProductionBatches.AsNoTracking().Where(b => b.StartedUtc >= since)
+            .Select(b => new { b.StartedUtc, b.UnitsProduced, b.UnitsRejected }).ToListAsync(ct);
+        static double Rate(int units, int rejected) => units == 0 ? 0 : Math.Round(100.0 * rejected / units, 2);
+        var days = batches.GroupBy(b => b.StartedUtc.Date).OrderBy(g => g.Key).Select(g => new
+        {
+            day = g.Key.ToString("yyyy-MM-dd"), units = g.Sum(b => b.UnitsProduced), rejected = g.Sum(b => b.UnitsRejected),
+            ratePercent = Rate(g.Sum(b => b.UnitsProduced), g.Sum(b => b.UnitsRejected)),
+        }).ToList();
 
         return Ok(new
         {
@@ -80,6 +90,11 @@ public class OverviewController(MachineService machines, TileTwinDbContext db, A
             openAlerts = new { total = alerts.Count, critical = alerts.Count(s => s == AlertSeverity.Critical) },
             openHighPriorityObservations = highObs,
             latestAnomaly = latest,
+            production = new
+            {
+                units = days.Sum(d => d.units), rejected = days.Sum(d => d.rejected),
+                ratePercent = Rate(days.Sum(d => d.units), days.Sum(d => d.rejected)), days,
+            },
             config = new
             {
                 ai = llm.IsConfigured,

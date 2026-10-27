@@ -2,7 +2,8 @@
 
 ## Current state
 
-**All 12 milestones DONE (2026-10-24).** See the Definition-of-Done checklist at the end.
+**All 12 milestones DONE (2026-10-24).** Post-M12: Groq provider (2026-10-24) and a full UI redesign
+(2026-10-27). See the Definition-of-Done checklist at the end.
 
 ## Environment (2026-10-22, Windows 11)
 
@@ -16,11 +17,11 @@
 
 Ports: Postgres 5434, API 5080, ML 8001, frontend 5180 (5173 is taken by another local app).
 
-## Test results (final run 2026-10-24)
+## Test results (latest run 2026-10-27, after the UI redesign)
 
 | Suite | Command | Result |
 |---|---|---|
-| Backend (xUnit, real Postgres `tiletwin_test`) | `dotnet test backend/TileTwin.slnx` | **81 passed, 0 failed** (~65 s, mostly re-seeding 494k readings) |
+| Backend (xUnit, real Postgres `tiletwin_test`) | `dotnet test backend/TileTwin.slnx` | **85 passed, 0 failed** (~2 min, mostly re-seeding readings) |
 | Frontend (Vitest) | `npm test` | **17 passed**; `npm run build` OK; `oxlint` 0 errors, 8 warnings (see M12) |
 | End-to-end smoke | `python scripts/smoke.py` (services running) | **20/20 checks passed** (Scenarios A–D at API level) |
 | ML (pytest) | `.venv\Scripts\python -m pytest` | **16 passed** (1 harmless Starlette/httpx deprecation warning) |
@@ -298,6 +299,44 @@ health checks; `.env.example`; README.
 - Default model `openai/gpt-oss-120b` (checked against Groq's model list; tool calling verified).
 - Unit tests with a fake HTTP handler (4); test host blanks both AI keys so tests never call a real LLM.
 - System prompt now asks for plain text (the chat UI does not render Markdown tables).
+
+## Post-M12: UI redesign (2026-10-27)
+
+Requested by the user: a more standard, higher-quality look, a proper hero page and new colour themes.
+
+- **Design system** (`frontend/src/index.css`): semantic colour tokens for a **dark** and a **light** theme
+  (toggle in the top bar, remembered in `localStorage`, applied before first paint), cobalt accent,
+  status colours reserved for machine state, text contrast checked at WCAG AA in both themes. Fonts
+  are self-hosted (Archivo display, IBM Plex Sans/Mono). Shared component classes (`card`, `btn-*`,
+  `input`, `segmented`, `data-table`, `chip`, …) replace per-page styling.
+- **Shell**: grouped, collapsible sidebar with icons; top bar with breadcrumb, live-data indicator,
+  open-alert bell, theme toggle and account menu; sign-in moved into a dialog (demo-account buttons fill
+  the email). The **DEMONSTRATION FACILITY — SYNTHETIC DATA** banner is a hazard-tape strip on every page.
+- **Overview hero**: fleet health (% normal, per-machine status strip, counts), a live **plant layout
+  drawing** generated from the 3D asset manifest (markers coloured by status, click → 3D twin), KPI cards
+  (open threshold alerts, high-priority observations, latest ML anomaly, **7-day reject rate** with a
+  sparkline), "Needs attention", latest alerts and system status. Backend: `/api/overview` now also
+  returns 7-day production totals per day from `ProductionBatches`.
+- **Every page** moved to the shared page frame and components: Monitoring (status filter with counts),
+  machine detail (themed charts with limit lines), Inspection, observation detail (timeline),
+  Predictive (score bar + score-history trend), Tile Quality (drop zone, sample-mode switch), Assistant
+  (chat layout), Knowledge Centre, Reports (report-type cards, paper-style report view), Administration,
+  404 page. The 3D scene, labels and legend follow the active theme; status is never shown by colour alone
+  (icon + label everywhere).
+- **Fix found during the visual check**: `/api/overview` and the tile status took ~2 s per request on
+  Windows because `ML_SERVICE_URL=http://localhost:8001` makes .NET try IPv6 `::1` first while uvicorn
+  listens on IPv4 only. Default (code and `.env.example`) is now `http://127.0.0.1:8001`; overview
+  latency ~2.07 s → ~0.05–0.09 s. Documented in TROUBLESHOOTING.
+- **Verification**: tests/lint/build/smoke as in the table above; all 13 pages screenshotted in both themes
+  with headless Chrome (signed in as DEV admin) and reviewed; no console errors except the one below.
+
+### Known limitations (redesign)
+
+- Leaving the 3D page logs "Attempted to synchronously unmount a root while React was already rendering"
+  once per HTML label (21×). It comes from `@react-three/drei` `<Html>` (10.7.9) unmounting its own React
+  roots during the route change; harmless, not patched (library code).
+- Production bundle: `TwinPage` chunk ~1.1 MB and main chunk ~0.8 MB (three.js, Recharts; the 3D page is
+  lazy-loaded). Font files add ~300 kB in total, fetched per unicode range.
 
 ## Definition of Done (§11)
 

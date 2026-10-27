@@ -1,5 +1,345 @@
+@import "@fontsource-variable/archivo/standard.css";
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
 @import "tailwindcss";
 
-body {
-  @apply bg-slate-950 text-slate-200 antialiased;
+/*
+ * TileTwin design system — "Porcelain & Kiln".
+ * Two themes share one set of semantic tokens. Colour carries meaning: the cobalt-glaze accent is for
+ * interaction only; status hues (ok / warn / crit / off / unk) are reserved for machine state.
+ * Text tokens meet WCAG AA (≥ 4.5:1) on surface in both themes.
+ */
+
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+  /* Kiln — charcoal control room */
+  --canvas: #0d0f12;
+  --surface: #14171b;
+  --raised: #1b1f24;
+  --sunken: #101317;
+  --line: #252a31;
+  --line-strong: #343a43;
+  --fg: #eceef1;
+  --muted: #a4abb6;
+  --subtle: #848c99;
+  --accent: #7398ff;
+  --accent-strong: #3460e6;
+  --accent-strong-hover: #4570f0;
+  --on-accent: #ffffff;
+  --ok: #3ecf8e;
+  --warn: #f2b544;
+  --crit: #ff6b6b;
+  --serious: #ff9447;
+  --off: #959ba5;
+  --unk: #b799ff;
+  --info: #6cb4ff;
+  --ok-fill: #34c77f;
+  --warn-fill: #f2b544;
+  --crit-fill: #ff5c5c;
+  --off-fill: #6b717b;
+  --unk-fill: #a681ff;
+  --series-1: #3987e5;
+  --grid: rgb(115 152 255 / 0.05);
+  --grid-major: rgb(115 152 255 / 0.1);
+  --shadow-card: inset 0 1px 0 rgb(255 255 255 / 0.03), 0 10px 30px -18px rgb(0 0 0 / 0.7);
+  --shadow-pop: 0 24px 60px -20px rgb(0 0 0 / 0.75), 0 0 0 1px rgb(255 255 255 / 0.04);
+  --scene-bg: #0f1216;
+  --scene-floor: #161a1f;
+  --scene-grid: #232932;
+  --scene-grid-major: #323a45;
+  --scene-wall: #2a313b;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  /* Porcelain — glazed off-white */
+  --canvas: #f3f1ec;
+  --surface: #ffffff;
+  --raised: #f8f7f4;
+  --sunken: #f6f4f0;
+  --line: #e2ded6;
+  --line-strong: #cbc5ba;
+  --fg: #181a1e;
+  --muted: #535a65;
+  --subtle: #646a74;
+  --accent: #2350d8;
+  --accent-strong: #2350d8;
+  --accent-strong-hover: #1c44bd;
+  --on-accent: #ffffff;
+  --ok: #0f7a52;
+  --warn: #965a00;
+  --crit: #c4262e;
+  --serious: #b5470a;
+  --off: #5f6670;
+  --unk: #6d43c4;
+  --info: #0b63b8;
+  --ok-fill: #1fa971;
+  --warn-fill: #e09a10;
+  --crit-fill: #e5484d;
+  --off-fill: #8a9099;
+  --unk-fill: #8b5cf6;
+  --series-1: #2a78d6;
+  --grid: rgb(35 80 216 / 0.05);
+  --grid-major: rgb(35 80 216 / 0.1);
+  --shadow-card: 0 1px 2px rgb(24 26 30 / 0.05), 0 10px 28px -20px rgb(24 26 30 / 0.22);
+  --shadow-pop: 0 24px 60px -24px rgb(24 26 30 / 0.35), 0 0 0 1px rgb(24 26 30 / 0.06);
+  --scene-bg: #e9e6df;
+  --scene-floor: #dcd7cd;
+  --scene-grid: #cbc4b7;
+  --scene-grid-major: #b3ab9c;
+  --scene-wall: #c9c2b5;
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-sunken: var(--sunken);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-strong-hover: var(--accent-strong-hover);
+  --color-on-accent: var(--on-accent);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-crit: var(--crit);
+  --color-serious: var(--serious);
+  --color-off: var(--off);
+  --color-unk: var(--unk);
+  --color-info: var(--info);
+  --color-ok-fill: var(--ok-fill);
+  --color-warn-fill: var(--warn-fill);
+  --color-crit-fill: var(--crit-fill);
+  --color-off-fill: var(--off-fill);
+  --color-unk-fill: var(--unk-fill);
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
+  --font-display: "Archivo Variable", "IBM Plex Sans", ui-sans-serif, sans-serif;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-canvas font-sans text-fg antialiased;
+    font-size: 14px;
+    line-height: 1.5;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--accent) 32%, transparent);
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+  code {
+    @apply rounded bg-raised px-1 py-0.5 font-mono text-[0.92em];
+  }
+  dialog::backdrop {
+    background: rgb(5 7 10 / 0.55);
+    backdrop-filter: blur(3px);
+  }
+}
+
+@layer components {
+  /* Typography */
+  .display {
+    font-family: var(--font-display);
+    font-stretch: 112%;
+    letter-spacing: -0.015em;
+  }
+  .num {
+    font-family: var(--font-display);
+    font-stretch: 100%;
+    font-variant-numeric: tabular-nums;
+  }
+  .eyebrow {
+    @apply text-[11px] font-semibold tracking-[0.14em] text-subtle uppercase;
+  }
+  .link {
+    @apply text-accent underline-offset-2 hover:underline;
+  }
+
+  /* Surfaces */
+  .card {
+    @apply rounded-xl border border-line bg-surface;
+    box-shadow: var(--shadow-card);
+  }
+  .glass {
+    @apply border border-line;
+    background: color-mix(in oklab, var(--surface) 86%, transparent);
+    backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-pop);
+  }
+
+  /* Buttons */
+  .btn {
+    @apply inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-transparent px-3 text-[13px] font-medium whitespace-nowrap transition-colors duration-150 select-none disabled:pointer-events-none disabled:opacity-45;
+  }
+  .btn-sm {
+    @apply h-7 gap-1 rounded-md px-2.5 text-xs;
+  }
+  .btn-lg {
+    @apply h-10 px-4 text-sm;
+  }
+  .btn-primary {
+    @apply bg-accent-strong text-on-accent hover:bg-accent-strong-hover;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.14), 0 1px 2px rgb(0 0 0 / 0.2);
+  }
+  .btn-secondary {
+    @apply border-line-strong bg-raised text-fg hover:border-subtle/60 hover:bg-line/60;
+  }
+  .btn-ghost {
+    @apply text-muted hover:bg-raised hover:text-fg;
+  }
+  .btn-danger {
+    @apply border-crit/35 bg-crit/10 text-crit hover:bg-crit/20;
+  }
+  .btn-warn {
+    @apply border-warn/35 bg-warn/10 text-warn hover:bg-warn/20;
+  }
+  .btn-ok {
+    @apply border-ok/35 bg-ok/10 text-ok hover:bg-ok/20;
+  }
+  .icon-btn {
+    @apply inline-flex size-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-raised hover:text-fg;
+  }
+
+  /* Forms */
+  .input {
+    @apply h-8 w-full rounded-lg border border-line-strong bg-sunken px-2.5 text-[13px] text-fg transition-[border-color,box-shadow] placeholder:text-subtle focus:border-accent focus:ring-3 focus:ring-accent/20 focus:outline-none;
+  }
+  textarea.input {
+    @apply h-auto py-2;
+  }
+  .input-sm {
+    @apply h-7 text-xs;
+  }
+  .field-label {
+    @apply mb-1 block text-xs font-medium text-muted;
+  }
+  .file-input {
+    @apply block text-xs text-muted file:mr-3 file:h-8 file:cursor-pointer file:rounded-lg file:border file:border-line-strong file:bg-raised file:px-3 file:text-[13px] file:font-medium file:text-fg hover:file:bg-line/60;
+  }
+
+  /* Segmented control: a row of role="radio" buttons. */
+  .segmented {
+    @apply inline-flex items-center gap-0.5 rounded-lg border border-line bg-sunken p-0.5;
+  }
+  .segmented > button {
+    @apply inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium whitespace-nowrap text-muted transition-colors hover:text-fg;
+  }
+  .segmented > button[aria-checked='true'] {
+    @apply bg-raised text-fg shadow-sm ring-1 ring-line-strong;
+  }
+
+  /* Data */
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full border border-line bg-raised px-2 py-0.5 text-[11px] font-medium text-muted;
+  }
+  .data-table {
+    @apply w-full text-[13px];
+  }
+  .data-table thead th {
+    @apply border-b border-line px-3 py-2 text-left text-[11px] font-semibold tracking-[0.08em] whitespace-nowrap text-subtle uppercase;
+  }
+  .data-table tbody td {
+    @apply border-b border-line/70 px-3 py-2.5 align-middle;
+  }
+  .data-table tbody tr {
+    @apply transition-colors hover:bg-raised/70;
+  }
+  .data-table tbody tr:last-child td {
+    @apply border-b-0;
+  }
+
+  /* Industrial details */
+  .hazard {
+    background: repeating-linear-gradient(-45deg, #f2b544 0 10px, #e5a531 10px 20px);
+    color: #1b1406;
+  }
+  .bg-blueprint {
+    background-image:
+      linear-gradient(var(--grid-major) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-major) 1px, transparent 1px),
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 120px 120px, 120px 120px, 24px 24px, 24px 24px;
+  }
+}
+
+/* Motion — one orchestrated reveal, live pulses; all disabled for reduced motion. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes pulse-ring {
+  from {
+    transform: scale(1);
+    opacity: 0.75;
+  }
+  to {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+@keyframes live {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.reveal {
+  animation: rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+.pulse-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pulse-ring 1.8s ease-out infinite;
+}
+.live-dot {
+  animation: live 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .pulse-ring,
+  .live-dot {
+    animation: none !important;
+  }
+  body {
+    transition: none;
+  }
 }

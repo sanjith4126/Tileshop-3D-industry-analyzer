@@ -54,7 +54,7 @@ public sealed class AppConfig
             LlmProvider = c["LLM:Provider"],
             LlmModel = c["LLM:Model"],
             EmbeddingsProvider = c["EMBEDDINGS:Provider"],
-            MlServiceUrl = string.IsNullOrWhiteSpace(c["ML_SERVICE_URL"]) ? "http://localhost:8001" : c["ML_SERVICE_URL"]!,
+            MlServiceUrl = string.IsNullOrWhiteSpace(c["ML_SERVICE_URL"]) ? "http://127.0.0.1:8001" : c["ML_SERVICE_URL"]!,
             DevSeedUserPassword = c["DEV_SEED_USER_PASSWORD"],
         };
     }
