@@ -8,6 +8,18 @@ a **fictional** tile plant. **All data is synthetic.** It does not represent any
 > PDF reports use QuestPDF: its Community licence is free only for organisations under the revenue
 > threshold — a company adopting this must check QuestPDF licensing.
 
+## Screenshots
+
+All screenshots show the fictional plant with synthetic data.
+
+| Overview (dark theme) | Overview (light theme) |
+|---|---|
+| ![Overview, dark theme](docs/screenshots/overview-dark.png) | ![Overview, light theme](docs/screenshots/overview-light.png) |
+| **3D digital twin** — machine selected, live readings from the API | **Predictive maintenance** — ML anomaly score with explanation |
+| ![3D digital twin](docs/screenshots/digital-twin.png) | ![Predictive maintenance](docs/screenshots/predictive-maintenance.png) |
+
+![Machine monitoring](docs/screenshots/machine-monitoring.png)
+
 ## Prerequisites
 
 | Tool | Version used |
