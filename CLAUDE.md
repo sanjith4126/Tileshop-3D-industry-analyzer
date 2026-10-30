@@ -1,5 +1,10 @@
 # TileTwin AI — Build Specification for Claude Code
 
+> **Current work (since 2026-10-30): standardisation.** Follow [`docs/MASTER_PROMPT.md`](docs/MASTER_PROMPT.md),
+> the master standardisation prompt. Where it differs from the original build specification below, the
+> master prompt wins. Work one phase at a time; `docs/PROGRESS.md` is the ledger and says which phase is next.
+
+
 Concept demo: industrial digital twin, remote site inspection, machine monitoring,
 predictive maintenance and AI assistant for a FICTIONAL tile manufacturing facility.
 

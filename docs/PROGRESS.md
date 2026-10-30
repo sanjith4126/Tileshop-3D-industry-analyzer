@@ -2,6 +2,19 @@
 
 ## Current state
 
+### Standardisation (docs/MASTER_PROMPT.md), started 2026-10-30
+
+| Phase | Status | Evidence |
+|---|---|---|
+| 1. Baseline | ✅ done 2026-10-30, tag `baseline` | [`docs/BASELINE.md`](BASELINE.md): versions, structure, build/run steps, test results (backend 85, frontend 17, ML 16, smoke 20/20, lint 0 errors), schema dump, OpenAPI snapshot, licences, known issues K1–K11, 15 screenshots at 1440 px |
+| 2. Conformance audit | **next** — produce `docs/CONFORMANCE_REPORT.md`; gate: human review | |
+| 3–10 | not started | |
+
+No application code was changed in Phase 1.
+
+### Original build (CLAUDE.md milestones)
+
+
 **All 12 milestones DONE (2026-10-24).** Post-M12: Groq provider (2026-10-24) and a full UI redesign
 (2026-10-27). See the Definition-of-Done checklist at the end.
 
