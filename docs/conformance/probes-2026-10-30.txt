@@ -1,0 +1,131 @@
+TileTwin AI - Phase 2 audit probes, 2026-10-30, against the running stack (API 127.0.0.1:5080, ML 127.0.0.1:8001, web localhost:5180).
+Produced by an ad-hoc probe script (HTTP via urllib, UI via Playwright + Chrome). Tokens and passwords are never printed.
+
+# §1 Anonymous access (no token)
+
+## Anonymous GET /api/machines
+HTTP 200
+
+## Anonymous GET /api/alerts
+HTTP 200
+
+## Anonymous GET /api/observations
+HTTP 200
+
+## Anonymous GET /api/reports
+HTTP 200
+
+## Anonymous GET /api/workflows/executions
+HTTP 200
+
+## Anonymous GET /api/overview
+HTTP 200
+
+## Anonymous GET /api/reports/{id}/pdf
+HTTP 200
+  Content-Type: application/pdf
+  Content-Disposition: attachment; filename=tiletwin-maintenanceprioritisation-20261030-0844.pdf; filename*=UTF-8''tiletwin-maintenanceprioritisation-20261030-0844.pdf
+
+# §2 Error formats
+
+## GET unknown machine (404 format)
+HTTP 404
+  Content-Type: application/problem+json; charset=utf-8
+  X-Correlation-ID: (absent)
+  body: {"type":"https://tools.ietf.org/html/rfc9110#section-15.5.5","title":"Not Found","status":404,"traceId":"00-24d66087f7cc69a0be2d87757aec6455-4a12285515c7041c-00"}
+
+## Invalid range (400 format)
+HTTP 400
+  Content-Type: application/problem+json; charset=utf-8
+  body: {"title":"One or more validation errors occurred.","status":400,"errors":{"range":["Use 1h, 24h or 7d"]}}
+
+## Login unknown user (401 format)
+HTTP 401
+  Content-Type: application/json; charset=utf-8
+  body: {"error":"Invalid email or password"}
+
+# §3 Security headers
+
+## Security headers on GET /api/health
+HTTP 200
+  Content-Security-Policy: (absent)
+  Strict-Transport-Security: (absent)
+  X-Content-Type-Options: (absent)
+  Referrer-Policy: (absent)
+  Permissions-Policy: (absent)
+  X-Frame-Options: (absent)
+  X-Correlation-ID: (absent)
+
+# §4 Health and API-description endpoints
+
+## GET http://127.0.0.1:5080/health/live
+HTTP 404
+
+## GET http://127.0.0.1:5080/health/ready
+HTTP 404
+
+## GET http://127.0.0.1:5080/api/health
+HTTP 200
+  body: {"status":"ok","service":"TileTwin.Api","database":"ok","demoData":{"seedBatchId":"demo-v1","anchorUtc":"2026-10-23T12:18:00Z","seededUtc":"2026-10-23T12:18:47.452749Z"},"features":{"ai":true,"embeddi
+
+## GET http://127.0.0.1:5080/swagger/index.html
+HTTP 200
+
+## GET http://127.0.0.1:5080/openapi/v1.json
+HTTP 200
+
+## GET http://127.0.0.1:8001/health
+HTTP 200
+  body: {"status":"ok","service":"tiletwin-ml","modelsLoaded":["TYPE-CONVEYOR","TYPE-HYDRAULIC-PRESS","TYPE-INSPECTION-STATION","TYPE-MOTOR","TYPE-PUMP"],"tileModel":{"configured":false,"status":"MODEL NOT CO
+
+## GET http://127.0.0.1:8001/v1/models
+HTTP 404
+
+## GET http://127.0.0.1:8001/models
+HTTP 200
+
+# §5 Access token contents (the token itself is never printed)
+
+## JWT header keys: ['alg', 'typ'] | alg: HS256 | kid present: False
+## JWT payload claims: ['aud', 'exp', 'iat', 'iss', 'name', 'nbf', 'role', 'sub']
+   lifetime (h): 8.0 | name claim looks like email: True 
+
+# §6 Account lockout (dev.viewer; 5 wrong passwords, then the correct one)
+
+## Lockout: 5 wrong logins -> [401, 401, 401, 401, 401] | correct password afterwards -> 401 (401 = locked out)
+
+# §7 Response fields
+
+## /api/machines/{id} top-level keys: ['machine', 'recentMaintenance', 'sensors'] | machine keys: ['dataOrigin', 'id', 'isFlaggedOffline', 'lastReadingUtc', 'maintenanceStatus', 'manufacturer', 'model', 'name', 'openAlertCount', 'status', 'statusReasons', 'typeId', 'typeName', 'zoneId', 'zoneName']
+## /api/overview keys: ['config', 'latestAnomaly', 'openAlerts', 'openHighPriorityObservations', 'production', 'statusCounts'] | production: {"units": 0, "rejected": 0, "ratePercent": 0, "days": []}
+## PUMP-002 24h series point counts: {'Flow': 0, 'Discharge pressure': 289, 'Temperature': 289, 'Vibration': 289} | bucketSeconds: 300
+## statuses: {'MACHINE-CONV-003': 'Offline', 'MACHINE-HP-002': 'Critical', 'MACHINE-PUMP-002': 'Unknown'} 
+
+# §8 Latency (n = 20 sequential requests, localhost, warm)
+
+## latency /api/machines: median 15 ms, p95 36 ms (n=20, sequential, localhost)
+## latency /api/overview: median 28 ms, p95 48 ms (n=20, sequential, localhost)
+## latency /api/machines/MACHINE-HP-002/readings?range=7d: median 162 ms, p95 217 ms (n=20, sequential, localhost)
+# §UI Layout and accessibility markers (Playwright, signed out, 375 px and 1280 px, light colour-scheme preference)
+
+375px /            {'docOverflow': 77, 'mainOverflow': 968, 'sidebarWidth': 248, 'navLinks': 10, 'skipLink': False, 'theme': 'dark', 'liveRegions': 1}
+375px /monitoring  {'docOverflow': 486, 'mainOverflow': 453, 'sidebarWidth': 248, 'navLinks': 10, 'skipLink': False, 'theme': 'dark', 'liveRegions': 1}
+375px /inspection  {'docOverflow': 77, 'mainOverflow': 35, 'sidebarWidth': 248, 'navLinks': 10, 'skipLink': False, 'theme': 'dark', 'liveRegions': 1}
+375px /predictive  {'docOverflow': 77, 'mainOverflow': 132, 'sidebarWidth': 248, 'navLinks': 10, 'skipLink': False, 'theme': 'dark', 'liveRegions': 3}
+375px /reports     {'docOverflow': 394, 'mainOverflow': 2, 'sidebarWidth': 248, 'navLinks': 10, 'skipLink': False, 'theme': 'dark', 'liveRegions': 1}
+375px /admin       {'docOverflow': 77, 'mainOverflow': 89, 'sidebarWidth': 248, 'navLinks': 10, 'skipLink': False, 'theme': 'dark', 'liveRegions': 1}
+375px /twin        {'docOverflow': 77, 'mainOverflow': 141, 'sidebarWidth': 248, 'navLinks': 10, 'skipLink': False, 'theme': 'dark', 'liveRegions': 1}
+1280px /            {'docOverflow': 0, 'mainOverflow': 0, 'sidebarWidth': 248, 'navLinks': 10, 'skipLink': False, 'theme': 'dark', 'liveRegions': 1}
+1280px /monitoring  {'docOverflow': 0, 'mainOverflow': 0, 'sidebarWidth': 248, 'navLinks': 10, 'skipLink': False, 'theme': 'dark', 'liveRegions': 1}
+1280px /inspection  {'docOverflow': 0, 'mainOverflow': 0, 'sidebarWidth': 248, 'navLinks': 10, 'skipLink': False, 'theme': 'dark', 'liveRegions': 1}
+1280px /predictive  {'docOverflow': 0, 'mainOverflow': 0, 'sidebarWidth': 248, 'navLinks': 10, 'skipLink': False, 'theme': 'dark', 'liveRegions': 3}
+1280px /reports     {'docOverflow': 0, 'mainOverflow': 0, 'sidebarWidth': 248, 'navLinks': 10, 'skipLink': False, 'theme': 'dark', 'liveRegions': 1}
+1280px /admin       {'docOverflow': 0, 'mainOverflow': 0, 'sidebarWidth': 248, 'navLinks': 10, 'skipLink': False, 'theme': 'dark', 'liveRegions': 1}
+1280px /twin        {'docOverflow': 0, 'mainOverflow': 0, 'sidebarWidth': 248, 'navLinks': 10, 'skipLink': False, 'theme': 'dark', 'liveRegions': 1}
+
+# §9 Open alerts (GET /api/alerts, anonymous)
+
+MACHINE-HP-002     Oil temperature  Critical  Open          value 70.085 limit 70 detected 2026-10-24T01:49
+MACHINE-HP-002     Vibration        Critical  Open          value 7.13 limit 7.1 detected 2026-10-23T09:28
+MACHINE-HP-002     Oil temperature  Warning   Open          value 60.31 limit 60 detected 2026-10-23T06:07
+MACHINE-HP-002     Vibration        Warning   Open          value 4.534 limit 4.5 detected 2026-10-23T00:55

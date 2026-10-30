@@ -7,10 +7,11 @@
 | Phase | Status | Evidence |
 |---|---|---|
 | 1. Baseline | ✅ done 2026-10-30, tag `baseline` | [`docs/BASELINE.md`](BASELINE.md): versions, structure, build/run steps, test results (backend 85, frontend 17, ML 16, smoke 20/20, lint 0 errors), schema dump, OpenAPI snapshot, licences, known issues K1–K11, 15 screenshots at 1440 px |
-| 2. Conformance audit | **next** — produce `docs/CONFORMANCE_REPORT.md`; gate: human review | |
-| 3–10 | not started | |
+| 2. Conformance audit | ✅ report done 2026-10-30 — **gate: waiting for your review and decisions D1–D8** | [`docs/CONFORMANCE_REPORT.md`](CONFORMANCE_REPORT.md): 352 rows — 57 CONFORMS, 187 PARTIAL, 74 MISSING, 34 VIOLATES; open rows by priority P0 48, P1 85, P2 95, P3 42, P4 25. Evidence: [`conformance/probes-2026-10-30.txt`](conformance/probes-2026-10-30.txt) |
+| 3. Safety net | next after review (CI, characterization tests, Playwright smoke, report-only architecture tests) | |
+| 4–10 | not started | |
 
-No application code was changed in Phase 1.
+No application code was changed in Phases 1 and 2.
 
 ### Original build (CLAUDE.md milestones)
 
