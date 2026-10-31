@@ -45,7 +45,7 @@ public class MachineService(TileTwinDbContext db, TimeProvider clock, AuditLogge
             sensors.Select(s => new SensorDto(s.SensorId, s.Measurement, s.Unit, s.IsRequired,
                 s.WarningMin, s.WarningMax, s.CriticalMin, s.CriticalMax,
                 s.LatestValue, s.LatestTimestampUtc, SensorStateOf(s, now))).ToList(),
-            maintenance);
+            maintenance, now);
     }
 
     public async Task<bool> UpdateStateAsync(string id, UpdateMachineStateRequest req, string? user, CancellationToken ct)

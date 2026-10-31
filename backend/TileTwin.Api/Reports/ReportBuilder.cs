@@ -68,7 +68,7 @@ public partial class ReportBuilder(TileTwinDbContext db, MachineService machines
             Section("Open threshold alerts", AlertTable(open)),
             Section("Open high-priority observations", new ReportTable(["Code", "Zone", "Priority", "Status", "Description"],
                 highObs.Select(o => (IReadOnlyList<string>)[Domain.Inspections.InspectionSummaryBuilder.Code(o.Id), o.Zone?.Name ?? o.ZoneId, o.Priority.ToString(), o.Status.ToString(), o.Description]).ToList())),
-        ], recs, "TileTwin database: Machines, SensorReadings (latest), Alerts, InspectionObservations, AnomalyScores.", list.Any(m => m.DataOrigin == DataOrigin.Synthetic));
+        ], recs, "TileTwin database: Machines, SensorReadings (latest), Alerts, InspectionObservations, AnomalyScores.");
     }
 
     async Task<ReportDocument> MachineAnomaliesAsync(DateTime from, DateTime to, string? machineId, DateTime now, CancellationToken ct)
@@ -103,7 +103,7 @@ public partial class ReportBuilder(TileTwinDbContext db, MachineService machines
                 byMachine.Select(g => (IReadOnlyList<string>)[g.Key, g.Count().ToString(), g.Count(s => s.IsAnomaly).ToString(),
                     $"{g.Max(s => s.Score):0.###}", $"{g.First().Threshold:0.###}", D(g.Where(s => s.IsAnomaly).Max(s => s.TimestampUtc))]).ToList()),
                 "Scores come from the ML service (Isolation Forest + feature-range check, trained on synthetic data)."),
-        ], recs, "TileTwin database: Alerts, AnomalyScores, SensorReadings (trends), suggestion rule table (docs/MAINTENANCE-RULES.md).", true);
+        ], recs, "TileTwin database: Alerts, AnomalyScores, SensorReadings (trends), suggestion rule table (docs/MAINTENANCE-RULES.md).");
     }
 
     static ReportTable AlertTable(IReadOnlyList<AlertDto> list) => new(["Detected", "Machine", "Sensor", "Severity", "Value", "Limit", "Status"],

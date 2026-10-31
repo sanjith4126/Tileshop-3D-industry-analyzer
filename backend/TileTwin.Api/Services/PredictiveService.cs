@@ -51,8 +51,11 @@ public class PredictiveService(TileTwinDbContext db, MachineService machines, Re
         {
             var state = detail.Sensors.FirstOrDefault(d => d.Id == s.SensorId)?.State ?? "Missing";
             var perHour = 3600 / series.BucketSeconds;
-            double? Avg(IEnumerable<SeriesPoint> pts) => pts.Any() ? Math.Round(pts.Average(p => p.Avg), 2) : null;
-            return new SensorTrendDto(s.SensorId, s.Measurement, s.Unit, state, TrendAnalyzer.Analyze(s.Points.Select(p => (p.T, p.Avg)).ToList()),
+            // Empty buckets are gaps: they are skipped, never filled.
+            double? Avg(IEnumerable<SeriesPoint> pts) => pts.Where(p => p.Avg is not null).Select(p => p.Avg!.Value).ToList() is { Count: > 0 } v
+                ? Math.Round(v.Average(), 2) : null;
+            return new SensorTrendDto(s.SensorId, s.Measurement, s.Unit, state,
+                TrendAnalyzer.Analyze(s.Points.Where(p => p.Avg is not null).Select(p => (p.T, p.Avg!.Value)).ToList()),
                 Avg(s.Points.Take(perHour)), Avg(s.Points.TakeLast(perHour)));
         }).ToList();
 
@@ -61,7 +64,7 @@ public class PredictiveService(TileTwinDbContext db, MachineService machines, Re
 
         return new PredictiveDto(m, new MlStatusDto(ml.Available, ml.Message, ml.LastCheckedUtc), latest,
             scores.Select(s => ToDto(s, now)).ToList(), trends, patterns, SuggestionRules.For(signals), quality,
-            await alerts.ListAsync(machineId, null, 20, ct), detail.RecentMaintenance, ReviewLabel, FailurePrediction);
+            await alerts.ListAsync(machineId, null, 20, ct), detail.RecentMaintenance, ReviewLabel, FailurePrediction, now);
     }
 
     static (List<string> Patterns, List<Signal> Signals) Observe(List<SensorTrendDto> trends, MachineDetailDto detail, AnomalyScoreDto? latest)
@@ -110,7 +113,7 @@ public class PredictiveService(TileTwinDbContext db, MachineService machines, Re
         var expected = (int)(TimeSpan.FromHours(24).TotalSeconds / series.BucketSeconds);
         foreach (var s in series.Sensors)
         {
-            var coverage = (double)s.Points.Count / expected;
+            var coverage = (double)s.Points.Count(p => p.Count > 0) / expected;
             if (coverage < 0.9) warnings.Add($"{s.Measurement}: data for only {coverage:P0} of 5-minute intervals in the last 24 h.");
         }
         foreach (var s in detail.Sensors.Where(s => s.State == "Missing"))

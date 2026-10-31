@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using TileTwin.Domain;
 using TileTwin.Domain.Entities;
 
 namespace TileTwin.Api.Reports;
@@ -14,8 +15,11 @@ public sealed record ReportDocument(
     IReadOnlyList<string> Summary,
     IReadOnlyList<ReportSection> Sections,
     IReadOnlyList<string> Recommendations,
-    string DataSource,
-    bool ContainsSyntheticData);
+    string DataSource)
+{
+    /// <summary>Every report describes the demonstration plant, so it is labelled with the plant's classification.</summary>
+    public string DataClassification => PlantData.Classification;
+}
 
 public sealed record ReportRequest(
     [Required] ReportType? Type,

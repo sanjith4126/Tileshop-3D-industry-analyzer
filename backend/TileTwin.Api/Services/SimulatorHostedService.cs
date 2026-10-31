@@ -9,17 +9,14 @@ public class SimulatorHostedService(IServiceScopeFactory scopes, ILogger<Simulat
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
-        // First tick: fill every missing minute (restart / PC sleep). Later ticks: fill any gap since the last
-        // reading, except right after an admin pause (that gap is deliberate).
-        var mode = SimulationEngine.Backfill.Holes;
+        // Live ticks only: downtime (restart, PC sleep, admin pause) stays a gap in the data.
         using var timer = new PeriodicTimer(Interval);
         do
         {
             try
             {
                 using var scope = scopes.CreateScope();
-                var r = await scope.ServiceProvider.GetRequiredService<SimulationEngine>().TickAsync(DateTime.UtcNow, mode, ct);
-                mode = r.Paused ? SimulationEngine.Backfill.None : SimulationEngine.Backfill.SinceLast;
+                await scope.ServiceProvider.GetRequiredService<SimulationEngine>().TickAsync(DateTime.UtcNow, ct);
             }
             catch (Exception ex) when (!ct.IsCancellationRequested)
             {

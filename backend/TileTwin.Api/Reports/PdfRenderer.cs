@@ -22,9 +22,8 @@ public static class PdfRenderer
 
         page.Header().Column(col =>
         {
-            if (r.ContainsSyntheticData)
-                col.Item().Background(Colors.Amber.Medium).Padding(4).AlignCenter()
-                    .Text("SYNTHETIC DATA — TileTwin Demonstration Facility (fictional)").Bold().FontSize(10);
+            col.Item().Background(Colors.Amber.Medium).Padding(4).AlignCenter()
+                .Text("SYNTHETIC DEMO DATA — TileTwin Demonstration Facility (fictional)").Bold().FontSize(10);
             col.Item().PaddingTop(6).Text(r.Title).Bold().FontSize(18);
             col.Item().Text($"Generated {D(r.GeneratedUtc)} · Period {D(r.FromUtc)} → {D(r.ToUtc)}"
                             + (r.Filters.Count > 0 ? " · Filters: " + string.Join(", ", r.Filters.Select(f => $"{f.Key} = {f.Value}")) : ""))
@@ -49,13 +48,12 @@ public static class PdfRenderer
             foreach (var rec in r.Recommendations) col.Item().Text("• " + rec);
 
             col.Item().PaddingTop(10).Text($"Data source: {r.DataSource}").FontColor(Colors.Grey.Darken1);
-            if (r.ContainsSyntheticData)
-                col.Item().Text("This report is built from SYNTHETIC demonstration data and does not describe a real site.").Italic().FontColor(Colors.Grey.Darken1);
+            col.Item().Text("This report is built from SYNTHETIC DEMO DATA and does not describe a real site.").Italic().FontColor(Colors.Grey.Darken1);
         });
 
         page.Footer().AlignCenter().Text(t =>
         {
-            t.Span("TileTwin AI prototype · page ");
+            t.Span("SYNTHETIC DEMO DATA · TileTwin AI prototype · page ");
             t.CurrentPageNumber();
             t.Span(" / ");
             t.TotalPages();

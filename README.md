@@ -110,9 +110,10 @@ maintenance records, production batches and two demo procedures. Every row is
 `DataOrigin = Synthetic`, `SeedBatchId = demo-v1`. Scripted patterns: MACHINE-HP-002 drifts to
 Critical, MACHINE-PUMP-002 loses its flow sensor (Unknown), MACHINE-CONV-003 is offline.
 
-While the API runs, a simulator writes a reading per sensor every 5 s; after a restart or PC sleep it
-fills missing minutes. **Administration → Reset demo data** (Admin) deletes only the synthetic demo rows
-in one transaction and re-seeds; user-created rows are kept.
+While the API runs, a simulator writes a reading per sensor every 5 s. Time it was not running (API
+stopped, PC asleep, simulator paused) stays a visible gap in the charts — nothing is back-filled. To start
+again from a complete 7-day history, use **Administration → Reset demo data** (Admin): it deletes only the
+synthetic demo rows in one transaction and re-seeds; user-created rows are kept.
 
 ## Optional components
 

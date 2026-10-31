@@ -14,14 +14,17 @@ export interface OverviewConfig {
   demoData: { seedBatchId: string; anchorUtc: string; seededUtc: string } | null
 }
 
-export interface ProductionDay { day: string; units: number; rejected: number; ratePercent: number }
+/** ratePercent is null when nothing was produced that day: no value, never 0 %. */
+export interface ProductionDay { day: string; units: number; rejected: number; ratePercent: number | null }
 
 export interface Overview {
+  dataClassification: 'SYNTHETIC' | 'REAL'
+  generatedAt: string
   statusCounts: Record<string, number>
   openAlerts: { total: number; critical: number }
   openHighPriorityObservations: number
   latestAnomaly: { machineId: string; score: number; threshold: number; timestampUtc: string; modelVersion: string } | null
-  production?: { units: number; rejected: number; ratePercent: number; days: ProductionDay[] }
+  production?: { fromUtc: string; toUtc: string; units: number; rejected: number; ratePercent: number | null; days: ProductionDay[] }
   config: OverviewConfig
 }
 

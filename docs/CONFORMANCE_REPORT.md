@@ -16,28 +16,28 @@ Statuses: CONFORMS · PARTIAL · MISSING · VIOLATES · NOT_APPLICABLE (Appendix
 Effort: S < ½ day, M ≤ 2 days, L more. **Slice** is assigned in Phase 4 (remediation plan); `TBD` until then.
 
 <!-- SUMMARY:BEGIN -->
-## Summary (2026-10-30)
+## Summary (2026-10-31)
 
 352 requirement rows (sections 2–22 and Appendix B).
 
 | Status | Rows | Share |
 |---|---:|---:|
-| CONFORMS | 57 | 16 % |
-| PARTIAL | 187 | 53 % |
-| MISSING | 74 | 21 % |
-| VIOLATES | 34 | 10 % |
+| CONFORMS | 64 | 18 % |
+| PARTIAL | 185 | 53 % |
+| MISSING | 73 | 21 % |
+| VIOLATES | 30 | 9 % |
 | NOT_APPLICABLE | 0 | 0 % |
 
 Open rows (everything not CONFORMS) by priority:
 
 | Priority | Meaning | PARTIAL | MISSING | VIOLATES | Total |
 |---|---|---:|---:|---:|---:|
-| P0 | data honesty, security, licences | 19 | 11 | 18 | 48 |
+| P0 | data honesty, security, licences | 17 | 10 | 14 | 41 |
 | P1 | policy correctness, data integrity, backend authority | 47 | 30 | 8 | 85 |
 | P2 | architecture, API, observability, performance, degraded modes | 68 | 22 | 5 | 95 |
 | P3 | design system, accessibility, UX, 3D twin | 38 | 1 | 3 | 42 |
 | P4 | documentation, ADRs, demo script | 15 | 10 | 0 | 25 |
-| **All** | | 187 | 74 | 34 | **295** |
+| **All** | | 185 | 73 | 30 | **288** |
 <!-- SUMMARY:END -->
 
 Counts at the baseline and now are identical, because Phase 2 changes no application code. Regenerate this block
@@ -80,17 +80,17 @@ destructive migrations, changing how the demo is accessed). The plan cannot be f
 
 | ID | Requirement | Status | Evidence | Gap | Priority | Effort | Slice |
 |---|---|---|---|---|---|---|---|
-| 2-01 | Every screen showing plant data identifies it as SYNTHETIC DEMO DATA | PARTIAL | `frontend/src/components/Layout.tsx:28` banner "DEMONSTRATION FACILITY — SYNTHETIC DATA" on every page; `DemoBadge` "DEMO DATA"; all baseline screenshots | Wording differs from "SYNTHETIC DEMO DATA"; charts carry no label of their own | P0 | S | S01 |
-| 2-02 | Every API response with plant data identifies it as synthetic | PARTIAL | Probe §7: machine detail has per-record `dataOrigin`; `/api/overview` has no classification field | No consistent classification field on responses | P0 | M | S01 |
-| 2-03 | Exports and reports are labelled synthetic | PARTIAL | `backend/TileTwin.Api/Reports/PdfRenderer.cs:23-27` header banner on every page; `:56-61` footer without label | Footer lacks the label; label is conditional on `ContainsSyntheticData` | P0 | S | S01 |
+| 2-01 | Every screen showing plant data identifies it as SYNTHETIC DEMO DATA | CONFORMS | `frontend/src/components/Layout.tsx` banner "DEMONSTRATION FACILITY — SYNTHETIC DEMO DATA" on every page; `DemoBadge` "SYNTHETIC DEMO DATA" keyed on `dataClassification`; every sensor chart and the score history carry the label in their caption (`SensorChart.tsx`, `ScoreCard.tsx`); tests `shell.test.tsx`, `monitoring.test.tsx`, `inspection.test.tsx` (S01) | — | — | — | S01 |
+| 2-02 | Every API response with plant data identifies it as synthetic | CONFORMS | `dataClassification` (set at plant level, `backend/TileTwin.Domain/PlantData.cs`) on machines, zones, readings, alerts, observations, inspection summaries, predictive, ML status, overview, reports, tile inspections, workflow executions and assistant answers; test `HonestDataTests.Plant_data_responses_are_classified_synthetic` (12 endpoints) (S01) | — | — | — | S01 |
+| 2-03 | Exports and reports are labelled synthetic | CONFORMS | `backend/TileTwin.Api/Reports/PdfRenderer.cs`: "SYNTHETIC DEMO DATA" in the header and footer of every page, unconditionally; report view banner keyed on `dataClassification`; `ReportTests` checks the label in the JSON (S01) | — | — | — | S01 |
 | 2-04 | Assistant answers identify synthetic data | CONFORMS | `backend/TileTwin.Api/Assistant/AssistantService.cs:19` disclaimer on every answer; `:22` system prompt | — | — | — | — |
 | 2-05 | No Saint-Gobain data, logos, branding or implied endorsement in the application | CONFORMS | `git grep -i saint -- frontend backend ml-service 3d-assets database scripts` → 0 files (2026-10-30) | — | — | — | — |
 | 2-06 | Absent, late or stale readings never count as NORMAL | CONFORMS | `backend/TileTwin.Domain/Status/MachineStatusCalculator.cs:39-45,57`; test `Missing_required_sensor_is_Unknown_never_Normal`; probe §7: PUMP-002 = Unknown | — | — | — | — |
-| 2-07 | Gaps are visible in charts; nothing is interpolated | VIOLATES | `backend/TileTwin.Api/Services/ReadingsService.cs:29-35` returns only non-empty buckets; `frontend/src/pages/monitoring/SensorChart.tsx:22,68` draws one continuous line | A gap is drawn as a straight line between the readings either side | P0 | M | S01 |
-| 2-08 | Readings are never forward-filled or back-filled to hide missing data | VIOLATES | `backend/TileTwin.Infrastructure/Simulation/SimulationEngine.cs:27-29,51-56,81-108`; tests `Simulator_backfills_a_gap_at_one_minute_resolution`, `Startup_hole_scan_fills_missing_minutes_inside_history` | After downtime every missed minute of the last 7 days is generated, with no provenance; the outage disappears from history | P0 | M | S01 |
+| 2-07 | Gaps are visible in charts; nothing is interpolated | CONFORMS | `ReadingsService.cs` returns every bucket with `count` (empty = nulls); `SensorChart.tsx` breaks the line (`connectNulls={false}`), shades gaps "No data", draws lone readings as dots and flags a stale latest value; score history and the reject-rate sparkline break at gaps; tests `MonitoringTests.Readings_keep_gaps_as_empty_buckets`, `monitoring.test.tsx` (S01) | — | — | — | S01 |
+| 2-08 | Readings are never forward-filled or back-filled to hide missing data | CONFORMS | `SimulationEngine.cs` writes the live point only (the SinceLast/Holes back-fill modes are removed); test `MonitoringTests.Simulator_never_backfills_downtime`; README, ARCHITECTURE and TROUBLESHOOTING updated (S01) | — | — | — | S01 |
 | 2-09 | Status, alert state, KPIs, priorities and permissions are computed server-side | PARTIAL | Status `MachineService.cs:91-98`, alerts and priorities server-side; but `frontend/src/pages/OverviewPage.tsx:30` computes the fleet %, and the warning count is `total − critical` in the browser | Some KPIs are derived in the frontend | P1 | S | S19 |
 | 2-10 | The frontend is never a security boundary | CONFORMS | Write endpoints enforce roles server-side; tests `Write_endpoint_enforces_roles`, `Admin_endpoints_require_admin_role` | — | — | — | — |
-| 2-11 | No fabricated values, mock data or invented responses | VIOLATES | `backend/TileTwin.Api/Controllers/AdminController.cs:80` returns `ratePercent = 0` when `units = 0`; probe §7 `{"units":0,"ratePercent":0}`; shown as "0.00 %" (BASELINE K1) | A KPI value is presented where there is no data | P0 | S | S01 |
+| 2-11 | No fabricated values, mock data or invented responses | CONFORMS | `ProductionQuality.RejectRatePercent` returns null without units (`ProductionQualityTests`), used by the overview and the assistant tool; the overview lists all 7 days and shows "No data — No production records in the last 7 days" (`HonestDataTests.Production_kpi_lists_every_day_and_has_no_rate_without_units`, `overview.test.tsx`) (S01) | — | — | — | S01 |
 | 2-12 | Unavailable dependencies show an explicit unavailable / not-configured state with the reason | CONFORMS | `AssistantController.cs:21` (503 AI NOT CONFIGURED), `MlClient.cs:25-42` (no score when ML is down), tile MODEL NOT CONFIGURED; tests `On_demand_score_requires_sign_in_and_reports_unavailable_honestly`, `Without_a_key_the_assistant_reports_not_configured_and_gives_no_answer` | — | — | — | — |
 | 2-13 | Anomaly scores are worded as statistical deviation, never failure probability | CONFORMS | `PredictiveService.cs:16-17`, `ReportBuilder.cs:95`, `AssistantService.cs:27`; UI text asserted in `predictive.test.tsx` | — | — | — | — |
 | 2-14 | The application works fully when the AI provider is absent, misconfigured or failing | CONFORMS | Test host blanks AI keys and all 85 tests pass; `AssistantController.cs:21-41`; workflow falls back to deterministic text (`AssistantWorkflowTests`) | — | — | — | — |
@@ -197,7 +197,7 @@ destructive migrations, changing how the demo is accessed). The plan cannot be f
 | 7-03 | Expected reporting interval per sensor ([5 s]) | PARTIAL | Simulator ticks every 5 s (`SimulatorHostedService.cs:8`) | Not modelled per sensor | P1 | S | S11 |
 | 7-04 | Sensor FRESH / STALE / NO_DATA with `stale_after` = 3 × interval | PARTIAL | `MachineStatusCalculator.cs:21,39-45` uses 5 min; `MachineService.cs:103-106` "Missing" | Single 5-minute literal, no NO_DATA distinction | P1 | S | S11 |
 | 7-05 | Machine communicating while any sensor reported within `offline_after` ([60 s]) | PARTIAL | `MachineStatusCalculator.cs:29-31` uses 5 min | Literal 5 min, not configuration | P1 | S | S11 |
-| 7-06 | Nothing interpolates or forward-fills (status, charts, ML, reports) | VIOLATES | See 2-07 and 2-08 | — | P0 | M | S01 |
+| 7-06 | Nothing interpolates or forward-fills (status, charts, ML, reports) | CONFORMS | Charts and readings: 2-07, 2-08. Status: missing data gives Unknown or Offline (`MachineStatusCalculator`). ML: one sample per minute, nothing filled, windows under 45 of 60 samples refused (`ml-service/app/main.py` MIN_POINTS). Predictive trends and averages skip empty buckets (`PredictiveService.cs`) (S01) | — | — | — | S01 |
 | 7-07 | Rule 1: never reported → UNKNOWN (NO_DATA) | VIOLATES | `MachineStatusCalculator.cs:29-31` returns OFFLINE; test `No_sensors_or_no_readings_is_Offline` | — | P1 | S | S11 |
 | 7-08 | Rule 2: no sensor within `offline_after` → OFFLINE (COMMUNICATION_LOST) | PARTIAL | `:29-31` (5 min) plus a manual "flagged offline" rule `:26-27` not in the policy | Extra rule, literal value | P1 | S | S11 |
 | 7-09 | Rule order CRITICAL → WARNING → UNKNOWN (PARTIAL_DATA) → NORMAL | VIOLATES | `:56-58` puts UNKNOWN before WARNING; test `Missing_data_outranks_warning` | Order differs | P1 | S | S11 |
@@ -357,7 +357,7 @@ destructive migrations, changing how the demo is accessed). The plan cannot be f
 | 13-06 | Time series: `from`/`to` required, ≤ 31 days, ≤ 500 buckets with min/avg/max/count; empty bucket = nulls | PARTIAL | `ReadingsService.cs:11-16` fixed 1h/24h/7d ranges, ≤ 336 buckets, min/avg/max ✓ | No count, no empty buckets (2-07), no from/to | P2 | M | S23 |
 | 13-07 | Status codes incl. 201+Location, 202 queued, 409, 429, 503 | PARTIAL | 201 (`ReportsController.cs:25`), 409, 429, 503 ✓; provider errors return 502 (`AssistantController.cs:27-41`) | — | P2 | S | S23 |
 | 13-08 | Every handler async with a `CancellationToken` | PARTIAL | `AdminController.cs:17-31` user endpoints take no token | — | P2 | S | S23 |
-| 13-09 | `dataClassification` on plant-data responses; `generatedAt` on snapshot/KPI responses | MISSING | Probe §7 | — | P0 | M | S01 |
+| 13-09 | `dataClassification` on plant-data responses; `generatedAt` on snapshot/KPI responses | PARTIAL | `dataClassification` on every plant-data response (`HonestDataTests`); `generatedAt` on the overview, machine detail and predictive detail snapshots (`HonestDataTests.Snapshot_responses_say_when_they_were_generated`) (S01) | Bare-array list responses (machines, predictive list) have no `generatedAt`; it goes into the v1 list envelope | P0 | M | S23 |
 | 13-10 | OpenAPI committed as `api/openapi.v1.json`; CI drift check with regenerated frontend types | PARTIAL | Generated at runtime (`/openapi/v1.json`); snapshot only in `docs/baseline/` | No committed contract, no CI | P2 | S | S23 |
 | 13-11 | Endpoint map per Appendix C | PARTIAL | 44 current paths (BASELINE §7) differ from Appendix C | — | P2 | L | S23 |
 

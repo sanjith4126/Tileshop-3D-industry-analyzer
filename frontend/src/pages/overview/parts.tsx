@@ -66,20 +66,31 @@ export function Kpi({ to, Icon, label, value, sub, tone = 'accent', i, children 
   )
 }
 
-/** Daily reject rate; each point has a hover tooltip (day, rate, units). */
+/** Daily reject rate; each point has a hover tooltip (day, rate, units). Days without production break the line. */
 export function RejectSparkline({ days }: { days: ProductionDay[] }) {
-  if (days.length < 2) return null
-  const max = Math.max(...days.map((d) => d.ratePercent)) * 1.15 || 1
-  const pts = days.map((d, i) => [(i / (days.length - 1)) * 100, 30 - (d.ratePercent / max) * 26] as const)
-  const line = pts.map(([x, y]) => `${x},${y}`).join(' ')
+  if (days.filter((d) => d.ratePercent != null).length < 2) return null
+  const max = Math.max(...days.map((d) => d.ratePercent ?? 0)) * 1.15 || 1
+  const pts = days.map((d, i) => d.ratePercent == null ? null : [(i / (days.length - 1)) * 100, 30 - (d.ratePercent / max) * 26] as const)
+  // One polyline per run of consecutive days with data; nothing is drawn across a day without records.
+  const runs: (readonly [number, number])[][] = [[]]
+  pts.forEach((p) => p ? runs[runs.length - 1].push(p) : runs[runs.length - 1].length && runs.push([]))
+  const last = pts.findLastIndex((p) => p != null)
   return (
-    <svg viewBox="-3 -3 106 36" className="h-10 w-28 shrink-0 overflow-visible" role="img" aria-label={`Reject rate by day: ${days.map((d) => `${d.day} ${d.ratePercent}%`).join(', ')}`}>
-      <polygon points={`0,30 ${line} 100,30`} style={{ fill: 'var(--series-1)', opacity: 0.12 }} />
-      <polyline points={line} fill="none" style={{ stroke: 'var(--series-1)' }} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-      {pts.map(([x, y], i) => (
+    <svg viewBox="-3 -3 106 36" className="h-10 w-28 shrink-0 overflow-visible" role="img"
+      aria-label={`Reject rate by day (synthetic): ${days.map((d) => `${d.day} ${d.ratePercent == null ? 'no records' : `${d.ratePercent}%`}`).join(', ')}`}>
+      {runs.filter((r) => r.length > 0).map((r) => {
+        const line = r.map(([x, y]) => `${x},${y}`).join(' ')
+        return (
+          <g key={r[0][0]}>
+            <polygon points={`${r[0][0]},30 ${line} ${r[r.length - 1][0]},30`} style={{ fill: 'var(--series-1)', opacity: 0.12 }} />
+            <polyline points={line} fill="none" style={{ stroke: 'var(--series-1)' }} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+          </g>
+        )
+      })}
+      {pts.map((p, i) => p && (
         <g key={days[i].day}>
-          <circle cx={x} cy={y} r="7" fill="transparent"><title>{`${days[i].day}: ${days[i].ratePercent}% rejected (${days[i].rejected} of ${days[i].units})`}</title></circle>
-          {i === pts.length - 1 && <circle cx={x} cy={y} r="2.6" style={{ fill: 'var(--series-1)', stroke: 'var(--surface)' }} strokeWidth="1.5" />}
+          <circle cx={p[0]} cy={p[1]} r="7" fill="transparent"><title>{`${days[i].day}: ${days[i].ratePercent}% rejected (${days[i].rejected} of ${days[i].units})`}</title></circle>
+          {i === last && <circle cx={p[0]} cy={p[1]} r="2.6" style={{ fill: 'var(--series-1)', stroke: 'var(--surface)' }} strokeWidth="1.5" />}
         </g>
       ))}
     </svg>

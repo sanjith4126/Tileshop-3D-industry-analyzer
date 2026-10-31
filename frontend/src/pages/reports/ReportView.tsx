@@ -10,8 +10,8 @@ export function ReportBody({ report }: { report: Report }) {
   const d = report.document
   return (
     <article className="card mx-auto max-w-5xl overflow-hidden text-sm">
-      {d.containsSyntheticData && (
-        <p className="hazard px-4 py-1.5 text-center text-xs font-bold tracking-[0.12em]">SYNTHETIC DATA — TileTwin Demonstration Facility (fictional)</p>
+      {d.dataClassification === 'SYNTHETIC' && (
+        <p className="hazard px-4 py-1.5 text-center text-xs font-bold tracking-[0.12em]">SYNTHETIC DEMO DATA — TileTwin Demonstration Facility (fictional)</p>
       )}
       <div className="space-y-7 p-8">
         <header className="border-b border-line pb-5">

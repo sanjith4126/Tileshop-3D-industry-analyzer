@@ -25,8 +25,18 @@ public sealed record PredictiveDto(
     IReadOnlyList<AlertDto> OpenAlerts,
     IReadOnlyList<MaintenanceRecordDto> MaintenanceHistory,
     string ReviewLabel,
-    string FailurePrediction);
+    string FailurePrediction,
+    DateTime GeneratedAt)
+{
+    public string DataClassification => PlantData.Classification;
+}
 
-public sealed record PredictiveListItem(string MachineId, string Name, MachineStatus Status, AnomalyScoreDto? LatestScore);
+public sealed record PredictiveListItem(string MachineId, string Name, MachineStatus Status, AnomalyScoreDto? LatestScore)
+{
+    public string DataClassification => PlantData.Classification;
+}
 
-public sealed record ScoreResultDto(string MachineId, AnomalyScoreDto? Score, bool MlUnavailable, string? Problem);
+public sealed record ScoreResultDto(string MachineId, AnomalyScoreDto? Score, bool MlUnavailable, string? Problem)
+{
+    public string DataClassification => PlantData.Classification;
+}

@@ -119,5 +119,5 @@ public class MaintenancePrioritisationWorkflow(TileTwinDbContext db, MachineServ
             new ReportSection("Excluded", excluded.Count == 0 ? ["None."] : excluded),
         ],
         [recommendation, PredictiveService.ReviewLabel],
-        "TileTwin database: Machines, Alerts, AnomalyScores, SensorReadings (24 h trends), MaintenanceRecords.", true);
+        "TileTwin database: Machines, Alerts, AnomalyScores, SensorReadings (24 h trends), MaintenanceRecords.");
 }

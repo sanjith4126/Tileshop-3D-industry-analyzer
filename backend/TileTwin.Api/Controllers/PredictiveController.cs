@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TileTwin.Api.Dtos;
 using TileTwin.Api.Services;
+using TileTwin.Domain;
 using TileTwin.Infrastructure.Data;
 
 namespace TileTwin.Api.Controllers;
@@ -33,6 +34,6 @@ public class PredictiveController(PredictiveService predictive, AnomalyScoringSe
         var models = await db.MlModels.AsNoTracking().OrderBy(m => m.Id)
             .Select(m => new { m.Id, m.Version, m.Type, m.MachineType, m.Status, m.TrainedUtc, m.EvaluationSummaryJson, m.DataOrigin })
             .ToListAsync(ct);
-        return Ok(new { ml = new MlStatusDto(ml.Available, ml.Message, ml.LastCheckedUtc), models });
+        return Ok(new { dataClassification = PlantData.Classification, ml = new MlStatusDto(ml.Available, ml.Message, ml.LastCheckedUtc), models });
     }
 }

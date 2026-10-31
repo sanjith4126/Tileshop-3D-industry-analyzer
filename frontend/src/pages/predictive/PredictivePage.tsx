@@ -56,7 +56,7 @@ function Detail({ machineId }: { machineId: string }) {
             <h2 className="display text-xl font-semibold text-fg">{m.name}</h2>
           </div>
           <StatusBadge status={m.status} size="md" />
-          {m.dataOrigin === 'Synthetic' && <DemoBadge />}
+          {m.dataClassification === 'SYNTHETIC' && <DemoBadge />}
           <div className="ml-auto flex flex-wrap gap-2">
             <button onClick={() => { focusEntity(m.id); navigate('/twin') }} className="btn btn-secondary btn-sm"><Box className="size-3.5" aria-hidden="true" />Show in 3D</button>
             <Link to={`/monitoring/${m.id}`} className="btn btn-secondary btn-sm"><Activity className="size-3.5" aria-hidden="true" />Monitoring</Link>

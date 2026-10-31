@@ -11,13 +11,13 @@ const report: Report = {
     summary: ['No records for this period.'],
     sections: [{ heading: 'Maintenance records', paragraphs: ['No records for this period.'], table: null }],
     recommendations: ['No gaps between open alerts and recorded maintenance in this period.'],
-    dataSource: 'TileTwin database: MaintenanceRecords, Alerts.', containsSyntheticData: true,
+    dataSource: 'TileTwin database: MaintenanceRecords, Alerts.', dataClassification: 'SYNTHETIC',
   },
 }
 
 it('renders an empty-period report with the synthetic data label, filters and data source', () => {
   render(<ReportBody report={report} />)
-  expect(screen.getByText(/SYNTHETIC DATA/)).toBeInTheDocument()
+  expect(screen.getByText(/SYNTHETIC DEMO DATA/)).toBeInTheDocument()
   expect(screen.getByText(/Machine: MACHINE-HP-002/)).toBeInTheDocument()
   expect(screen.getAllByText('No records for this period.')).toHaveLength(2)
   expect(screen.getByText(/Data source: TileTwin database/)).toBeInTheDocument()

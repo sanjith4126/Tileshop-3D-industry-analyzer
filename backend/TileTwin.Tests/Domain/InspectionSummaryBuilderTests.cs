@@ -42,8 +42,18 @@ public class InspectionSummaryBuilderTests
         Assert.Contains($"address critical item(s) {InspectionSummaryBuilder.Code(crit.Id)}", string.Join(" ", s.Lines));
         Assert.Contains($"Oldest open item: {InspectionSummaryBuilder.Code(high.Id)}", string.Join(" ", s.Lines));
         Assert.Equal(["MACHINE-A", "ZONE-X"], s.FocusEntityIds);
-        Assert.True(s.ContainsSyntheticData);
-        Assert.Contains("SYNTHETIC", s.Lines[^1]);
+        Assert.Contains("SYNTHETIC DEMO DATA", s.Lines[^1]);
+    }
+
+    [Fact]
+    public void Records_created_by_users_are_labelled_synthetic_too()
+    {
+        // Classification is set at plant level: an observation a user adds to the demo plant is synthetic demo data.
+        var o = Obs(ObservationPriority.High, ObservationStatus.Open);
+        o.DataOrigin = DataOrigin.Real;
+        var s = InspectionSummaryBuilder.Build("Zone X", [o], Now);
+        Assert.Equal("SYNTHETIC", s.DataClassification);
+        Assert.Contains("SYNTHETIC DEMO DATA", s.Lines[^1]);
     }
 
     [Fact]

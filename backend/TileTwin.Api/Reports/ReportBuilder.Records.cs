@@ -31,7 +31,7 @@ public partial class ReportBuilder
             Section("Maintenance records", new ReportTable(["Date", "Machine", "Type", "Description", "Hours", "By", "Outcome"],
                 records.Select(r => (IReadOnlyList<string>)[D(r.PerformedUtc), r.MachineId, r.Type.ToString(), r.Description,
                     $"{r.DurationHours:0.#}", r.PerformedBy ?? "", r.Outcome ?? ""]).ToList())),
-        ], recs, "TileTwin database: MaintenanceRecords, Alerts.", records.Any(r => r.DataOrigin == DataOrigin.Synthetic));
+        ], recs, "TileTwin database: MaintenanceRecords, Alerts.");
     }
 
     async Task<ReportDocument> InspectionAsync(DateTime from, DateTime to, string? zoneId, DateTime now, CancellationToken ct)
@@ -53,6 +53,6 @@ public partial class ReportBuilder
             Section("Overdue corrective actions", new ReportTable(["Observation", "Action", "Status", "Due"],
                 overdue.Select(x => (IReadOnlyList<string>)[InspectionSummaryBuilder.Code(x.o.Id), x.a.Description, x.a.Status.ToString(), D(x.a.DueUtc!.Value)]).ToList())),
         ], s.Lines.Where(l => l.StartsWith("Recommendation")).Select(l => l["Recommendation: ".Length..]).DefaultIfEmpty(NoRecords).ToList(),
-            "TileTwin database: InspectionObservations, CorrectiveActions (deterministic InspectionSummaryBuilder).", s.ContainsSyntheticData);
+            "TileTwin database: InspectionObservations, CorrectiveActions (deterministic InspectionSummaryBuilder).");
     }
 }

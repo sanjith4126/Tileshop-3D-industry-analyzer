@@ -54,7 +54,7 @@ public class ZonesController(TileTwinDbContext db, MachineService machines) : Co
         var zone = await db.Zones.AsNoTracking().FirstOrDefaultAsync(z => z.Id == id, ct);
         if (zone is null) return NotFound();
         var list = await machines.ListAsync(id, ct);
-        return Ok(new { zone.Id, zone.Name, zone.Description, zone.DataOrigin, machines = list });
+        return Ok(new { zone.Id, zone.Name, zone.Description, zone.DataOrigin, dataClassification = PlantData.Classification, machines = list });
     }
 }
 

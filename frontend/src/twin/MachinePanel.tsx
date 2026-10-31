@@ -31,7 +31,7 @@ export function MachinePanel({ id, onClose }: { id: string; onClose: () => void 
         {q.data && (
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <StatusBadge status={q.data.machine.status} size="md" />
-            {q.data.machine.dataOrigin === 'Synthetic' && <DemoBadge />}
+            {q.data.dataClassification === 'SYNTHETIC' && <DemoBadge />}
           </div>
         )}
       </header>

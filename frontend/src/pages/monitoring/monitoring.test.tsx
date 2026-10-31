@@ -1,13 +1,14 @@
 import { screen } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import type { Alert } from '../../api/types'
+import type { Alert, SensorSeries } from '../../api/types'
 import { mockApi, renderWithProviders } from '../../test-utils'
 import { AlertsList } from './AlertsList'
+import { SensorChart } from './SensorChart'
 
 const alert: Alert = {
   id: 'a1', machineId: 'MACHINE-HP-002', machineName: 'Hydraulic Press 2', sensorId: 'SENSOR-HP-002-VIB',
   measurement: 'Vibration', unit: 'mm/s', severity: 'Critical', observedValue: 7.2, threshold: 7.1,
-  detectedUtc: '2026-10-23T06:00:00Z', status: 'Open', resolvedUtc: null, dataOrigin: 'Synthetic', history: [],
+  detectedUtc: '2026-10-23T06:00:00Z', status: 'Open', resolvedUtc: null, dataOrigin: 'Synthetic', dataClassification: 'SYNTHETIC', history: [],
 }
 
 const session = (roles: string[]) =>
@@ -38,4 +39,24 @@ it('Viewer cannot act; Inspector can acknowledge but not resolve', async () => {
   renderWithProviders(<AlertsList />)
   expect(await screen.findByRole('button', { name: 'Acknowledge' })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Resolve' })).not.toBeInTheDocument()
+})
+
+const at = (m: number) => new Date(Date.UTC(2026, 9, 23, 6, m)).toISOString()
+const bucket = (m: number, v: number | null) => ({ t: at(m), avg: v, min: v, max: v, count: v == null ? 0 : 1 })
+const flow = (values: (number | null)[]): SensorSeries => ({
+  sensorId: 'SENSOR-PUMP-002-FLOW', measurement: 'Flow', unit: 'L/min', warningMin: null, warningMax: 10, criticalMin: null, criticalMax: 12,
+  points: values.map((v, i) => bucket(i, v)),
+})
+
+it('keeps a gap a gap: empty buckets are counted and listed as no data, never filled', () => {
+  renderWithProviders(<SensorChart series={flow([5, 5.5, null, null, 6])} range="1h" />)
+  expect(screen.getByRole('img', { name: /3 of 5 buckets have readings, 1 gap\(s\) with no data/ })).toBeInTheDocument()
+  expect(screen.getAllByText('no data')).toHaveLength(2)
+  expect(screen.getByText('latest avg')).toBeInTheDocument()
+  expect(screen.getByText('SYNTHETIC DEMO DATA')).toBeInTheDocument()
+})
+
+it('does not present an old reading as the latest when recent buckets are empty', () => {
+  renderWithProviders(<SensorChart series={flow([5, 5.5, null, null])} range="1h" />)
+  expect(screen.getByText('last reading 06:01 UTC — no recent data')).toBeInTheDocument()
 })

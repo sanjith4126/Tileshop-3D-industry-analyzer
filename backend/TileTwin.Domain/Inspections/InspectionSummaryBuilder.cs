@@ -11,8 +11,10 @@ public sealed record InspectionSummary(
     IReadOnlyList<SummaryItem> OpenHighPriority,
     int OverdueActions,
     IReadOnlyList<string> Lines,
-    IReadOnlyList<string> FocusEntityIds,
-    bool ContainsSyntheticData);
+    IReadOnlyList<string> FocusEntityIds)
+{
+    public string DataClassification => PlantData.Classification;
+}
 
 /// <summary>
 /// Deterministic inspection summary computed from records only (no LLM). Every statement cites record codes.
@@ -62,14 +64,13 @@ public static class InspectionSummaryBuilder
                 : "Recommendation: continue routine inspections.");
         }
 
-        var synthetic = obs.Any(o => o.DataOrigin == DataOrigin.Synthetic);
-        lines.Add($"Source: {obs.Count} inspection record(s){(synthetic ? "; includes SYNTHETIC demo data" : "")}. Generated deterministically from records.");
+        lines.Add($"Source: {obs.Count} inspection record(s) of the demonstration plant — SYNTHETIC DEMO DATA. Generated deterministically from records.");
 
         var focus = high.Select(h => h.MachineId ?? h.ZoneId).Distinct().ToList();
         return new InspectionSummary(scope, nowUtc, obs.Count,
             Enum.GetValues<ObservationStatus>().ToDictionary(s => s, Count),
             Enum.GetValues<ObservationPriority>().ToDictionary(p => p, p => open.Count(o => o.Priority == p)),
-            high, overdue, lines, focus, synthetic);
+            high, overdue, lines, focus);
     }
 
     static string Shorten(string s) => s.Length <= 70 ? s.TrimEnd('.') : s[..67].TrimEnd(' ', ',', '.', ';') + "…";

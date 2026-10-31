@@ -2,6 +2,8 @@
 
 export type MachineStatus = 'Normal' | 'Warning' | 'Critical' | 'Offline' | 'Unknown'
 export type DataOrigin = 'Synthetic' | 'Real'
+/** Plant-level classification (every record of the demo plant is SYNTHETIC, including user-created ones). */
+export type DataClassification = 'SYNTHETIC' | 'REAL'
 export type SensorState = 'Normal' | 'Warning' | 'Critical' | 'Missing'
 
 export interface MachineSummary {
@@ -18,6 +20,7 @@ export interface MachineSummary {
   manufacturer: string
   model: string
   dataOrigin: DataOrigin
+  dataClassification: DataClassification
   lastReadingUtc: string | null
   openAlertCount: number
 }
@@ -46,12 +49,15 @@ export interface MaintenanceRecord {
   durationHours: number
   outcome: string | null
   dataOrigin: DataOrigin
+  dataClassification: DataClassification
 }
 
 export interface MachineDetail {
   machine: MachineSummary
   sensors: Sensor[]
   recentMaintenance: MaintenanceRecord[]
+  generatedAt: string
+  dataClassification: DataClassification
 }
 
 export interface Zone {
@@ -61,6 +67,7 @@ export interface Zone {
   machineCount: number
   statusCounts: Partial<Record<MachineStatus, number>>
   dataOrigin: DataOrigin
+  dataClassification: DataClassification
 }
 
 export interface Health {
@@ -102,14 +109,17 @@ export interface Alert {
   status: AlertStatus
   resolvedUtc: string | null
   dataOrigin: DataOrigin
+  dataClassification: DataClassification
   history: AlertHistory[]
 }
 
+/** A bucket with count 0 has null values: it is a gap, drawn as a gap. */
 export interface SeriesPoint {
   t: string
-  avg: number
-  min: number
-  max: number
+  avg: number | null
+  min: number | null
+  max: number | null
+  count: number
 }
 
 export interface SensorSeries {
@@ -132,6 +142,7 @@ export interface ReadingsResponse {
   toUtc: string
   bucketSeconds: number
   dataOrigin: DataOrigin
+  dataClassification: DataClassification
   sensors: SensorSeries[]
 }
 
@@ -144,6 +155,7 @@ export interface InspectionZone {
   total: number
   open: number
   openHighPriority: number
+  dataClassification: DataClassification
 }
 
 export interface ObservationSummary {
@@ -162,6 +174,7 @@ export interface ObservationSummary {
   updatedUtc: string
   openActions: number
   dataOrigin: DataOrigin
+  dataClassification: DataClassification
 }
 
 export interface ObservationDetail {
@@ -184,7 +197,7 @@ export interface InspectionSummary {
   overdueActions: number
   lines: string[]
   focusEntityIds: string[]
-  containsSyntheticData: boolean
+  dataClassification: DataClassification
 }
 
 export interface AnomalyScore {
@@ -204,6 +217,7 @@ export interface PredictiveListItem {
   name: string
   status: MachineStatus
   latestScore: AnomalyScore | null
+  dataClassification: DataClassification
 }
 
 export interface Predictive {
@@ -219,6 +233,8 @@ export interface Predictive {
   maintenanceHistory: MaintenanceRecord[]
   reviewLabel: string
   failurePrediction: string
+  generatedAt: string
+  dataClassification: DataClassification
 }
 
 export type ReportType = 'FactoryHealth' | 'MachineAnomalies' | 'MaintenanceHistory' | 'SiteInspection'
@@ -234,7 +250,7 @@ export interface ReportDocument {
   sections: { heading: string; paragraphs: string[]; table: { columns: string[]; rows: string[][] } | null }[]
   recommendations: string[]
   dataSource: string
-  containsSyntheticData: boolean
+  dataClassification: DataClassification
 }
 
 export interface Report {

@@ -12,11 +12,11 @@ afterEach(() => vi.unstubAllGlobals())
 const machine = (id: string, status: MachineSummary['status'], reasons: string[] = []): MachineSummary => ({
   id, name: id, typeId: 'T', typeName: 'Type', zoneId: 'ZONE-PRESS-A', zoneName: 'Pressing', status,
   statusReasons: reasons, maintenanceStatus: 'InService', isFlaggedOffline: false, manufacturer: 'Unknown (demo)',
-  model: 'Unknown (demo)', dataOrigin: 'Synthetic', lastReadingUtc: null, openAlertCount: 0,
+  model: 'Unknown (demo)', dataOrigin: 'Synthetic', dataClassification: 'SYNTHETIC', lastReadingUtc: null, openAlertCount: 0,
 })
 
 const overview: Overview = {
-  statusCounts: {}, openAlerts: { total: 3, critical: 1 }, openHighPriorityObservations: 7, latestAnomaly: null,
+  dataClassification: 'SYNTHETIC', generatedAt: '2026-10-24T08:00:00Z', statusCounts: {}, openAlerts: { total: 3, critical: 1 }, openHighPriorityObservations: 7, latestAnomaly: null,
   config: {
     ai: false, ml: { available: false, message: 'ML service unavailable', lastCheckedUtc: null },
     tileModel: { configured: false, status: 'MODEL NOT CONFIGURED' }, knowledgeSearch: 'keyword (embeddings not configured)',
@@ -28,7 +28,7 @@ describe('shell', () => {
   it('shows the synthetic-data banner and all ten navigation entries', () => {
     mockApi({ '/api/machines': [], '/api/overview': overview })
     renderWithProviders(<App />)
-    expect(screen.getByRole('note')).toHaveTextContent('DEMONSTRATION FACILITY — SYNTHETIC DATA')
+    expect(screen.getByRole('note')).toHaveTextContent('DEMONSTRATION FACILITY — SYNTHETIC DEMO DATA')
     const nav = screen.getByRole('navigation', { name: 'Main' })
     expect(nav.querySelectorAll('a')).toHaveLength(10)
   })

@@ -90,8 +90,9 @@ export default function OverviewPage() {
           value={o?.latestAnomaly ? <span className="font-mono text-xl">{o.latestAnomaly.machineId}</span> : o ? 'None' : '–'}
           sub={o?.latestAnomaly ? `flagged ${ago(o.latestAnomaly.timestampUtc)} · not a confirmed fault` : 'Statistical — not a confirmed fault'} />
         <Kpi i={4} to="/reports" Icon={Gauge} label="Reject rate · 7 days" tone="ok"
-          value={o?.production ? <>{o.production.ratePercent.toFixed(2)}<span className="text-lg text-subtle">%</span></> : '–'}
-          sub={o?.production ? `${o.production.rejected.toLocaleString()} of ${o.production.units.toLocaleString()} tiles` : ' '}>
+          value={o?.production?.ratePercent != null ? <>{o.production.ratePercent.toFixed(2)}<span className="text-lg text-subtle">%</span></> : o?.production ? 'No data' : '–'}
+          sub={!o?.production ? ' ' : o.production.ratePercent == null ? 'No production records in the last 7 days'
+            : `${o.production.rejected.toLocaleString()} of ${o.production.units.toLocaleString()} tiles`}>
           {o?.production && <RejectSparkline days={o.production.days} />}
         </Kpi>
       </section>

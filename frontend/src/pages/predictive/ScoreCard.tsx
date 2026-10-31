@@ -3,8 +3,10 @@ import type { AnomalyScore, MlStatus } from '../../api/types'
 import { formatUtc } from '../../lib/status'
 
 const pct = (v: number) => `${Math.min(100, Math.max(0, v * 100))}%`
+/** Scores are taken every 5 min; a longer pause between two scores is a gap and the line breaks there. */
+const MAX_STEP_MS = 2 * 5 * 60_000
 
-/** Score over time with the threshold drawn as a dashed line; each point has a hover tooltip. */
+/** Score over time with the threshold drawn as a dashed line; each point has a hover tooltip. Never joined across a gap. */
 function ScoreHistory({ history, threshold }: { history: AnomalyScore[]; threshold: number }) {
   if (history.length < 2) return null
   const pts = [...history].sort((a, b) => Date.parse(a.timestampUtc) - Date.parse(b.timestampUtc))
@@ -14,12 +16,16 @@ function ScoreHistory({ history, threshold }: { history: AnomalyScore[]; thresho
   const x = (p: AnomalyScore) => ((Date.parse(p.timestampUtc) - t0) / span) * 100
   const y = (v: number) => 38 - ((v - lo) / (hi - lo)) * 36
   const w = 100 / pts.length
+  const runs: AnomalyScore[][] = []
+  pts.forEach((p, i) => i > 0 && Date.parse(p.timestampUtc) - Date.parse(pts[i - 1].timestampUtc) <= MAX_STEP_MS ? runs[runs.length - 1].push(p) : runs.push([p]))
   return (
     <figure>
       <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="h-16 w-full overflow-visible" role="img"
         aria-label={`Anomaly score history: ${pts.length} scores from ${formatUtc(pts[0].timestampUtc)}, latest ${vals.at(-1)!.toFixed(3)}, threshold ${threshold.toFixed(3)}`}>
         <line x1="0" x2="100" y1={y(threshold)} y2={y(threshold)} style={{ stroke: 'var(--warn-fill)' }} strokeDasharray="4 3" vectorEffect="non-scaling-stroke" />
-        <polyline points={pts.map((p) => `${x(p)},${y(p.score)}`).join(' ')} fill="none" style={{ stroke: 'var(--series-1)' }} strokeWidth="2" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        {runs.map((r) => r.length > 1
+          ? <polyline key={r[0].timestampUtc} points={r.map((p) => `${x(p)},${y(p.score)}`).join(' ')} fill="none" style={{ stroke: 'var(--series-1)' }} strokeWidth="2" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+          : <circle key={r[0].timestampUtc} cx={x(r[0])} cy={y(r[0].score)} r="1.2" style={{ fill: 'var(--series-1)' }} />)}
         {pts.map((p) => (
           <rect key={p.timestampUtc} x={x(p) - w / 2} y="0" width={w} height="40" fill="transparent" className="hover:fill-fg/5">
             <title>{`${formatUtc(p.timestampUtc)} · score ${p.score.toFixed(3)}${p.isAnomaly ? ' · anomaly' : ''}`}</title>
@@ -27,7 +33,7 @@ function ScoreHistory({ history, threshold }: { history: AnomalyScore[]; thresho
         ))}
       </svg>
       <figcaption className="mt-1 flex justify-between text-[10px] text-subtle">
-        <span>{formatUtc(pts[0].timestampUtc)}</span><span>score history · dashed = threshold</span><span>{formatUtc(pts.at(-1)!.timestampUtc)}</span>
+        <span>{formatUtc(pts[0].timestampUtc)}</span><span>score history · dashed = threshold · line breaks at gaps · synthetic data</span><span>{formatUtc(pts.at(-1)!.timestampUtc)}</span>
       </figcaption>
     </figure>
   )

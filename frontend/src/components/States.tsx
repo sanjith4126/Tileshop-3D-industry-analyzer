@@ -32,14 +32,14 @@ export function EmptyState({ children, icon = true }: { children: ReactNode; ico
   )
 }
 
-/** Shown wherever synthetic readings/records appear. */
+/** Shown wherever plant data appears (prime directive 1). */
 export function DemoBadge() {
   return (
     <span
       title="Synthetic demonstration data — not from a real plant"
       className="inline-flex items-center rounded-md bg-warn/12 px-1.5 py-0.5 text-[10px] font-bold tracking-[0.12em] text-warn ring-1 ring-warn/35 ring-inset"
     >
-      DEMO DATA
+      SYNTHETIC DEMO DATA
     </span>
   )
 }

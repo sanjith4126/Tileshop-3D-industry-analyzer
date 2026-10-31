@@ -34,8 +34,8 @@ Concept demo for a **fictional** tile plant. Everything runs locally; only Postg
    PostgreSQL binary COPY; the alert rules are replayed over the history so alerts have real crossing
    times. Fixed random seed → identical values every reset.
 2. **Simulator** (`SimulatorHostedService`, every 5 s): one reading per live sensor, continuing the
-   scripted patterns (`SignalModel`); fills missing minutes after restarts or PC sleep; opens threshold
-   alerts with de-duplication. Pausable from Administration.
+   scripted patterns (`SignalModel`); opens threshold alerts with de-duplication. Pausable from
+   Administration. It writes the live point only: downtime stays a gap and is never back-filled.
 3. **Status** is computed on read (`MachineStatusCalculator`): Offline > Critical > Unknown > Warning >
    Normal; missing data is never Normal; a fresh ML anomaly raises Normal to Warning.
 4. **Anomaly scoring** (`AnomalyHostedService`, every 5 min, or "Score now"): last 60 one-minute samples

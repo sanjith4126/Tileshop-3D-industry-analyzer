@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using TileTwin.Api.Services;
+using TileTwin.Domain;
 using TileTwin.Infrastructure.Data;
 using TileTwin.Infrastructure.Llm;
 
@@ -11,7 +12,10 @@ public sealed record ChatMessageDto([Required, RegularExpression("^(user|assista
 
 public sealed record ChatRequest([Required, MinLength(1), MaxLength(20)] List<ChatMessageDto> Messages);
 
-public sealed record ChatResponse(string Answer, IReadOnlyList<ToolCallRecord> ToolCalls, IReadOnlyList<string> FocusEntityIds, bool ToolLimitReached, string Disclaimer);
+public sealed record ChatResponse(string Answer, IReadOnlyList<ToolCallRecord> ToolCalls, IReadOnlyList<string> FocusEntityIds, bool ToolLimitReached, string Disclaimer)
+{
+    public string DataClassification => PlantData.Classification;
+}
 
 public partial class AssistantService(ILlmProvider llm, AssistantTools tools, AuditLogger audit, TileTwinDbContext db, ILogger<AssistantService> log)
 {

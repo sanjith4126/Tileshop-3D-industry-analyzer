@@ -26,7 +26,7 @@ export function Layout() {
     <div className="flex h-screen flex-col">
       <div role="note" className="hazard flex h-7 shrink-0 items-center justify-center">
         <span className="rounded-sm bg-[#1b1406] px-2.5 py-0.5 text-[11px] font-bold tracking-[0.16em] text-[#f2b544]">
-          DEMONSTRATION FACILITY — SYNTHETIC DATA
+          DEMONSTRATION FACILITY — SYNTHETIC DEMO DATA
         </span>
       </div>
       <div className="flex min-h-0 flex-1">

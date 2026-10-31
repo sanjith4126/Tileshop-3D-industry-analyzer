@@ -84,7 +84,7 @@ export default function ObservationDetailPage() {
       <PageHeader
         eyebrow={<><Link to="/inspection" className="link">Remote Site Inspection</Link> / <span className="font-mono normal-case">{o.code}</span></>}
         title={<span className="font-mono">{o.code}</span>}
-        badges={<><PriorityBadge priority={o.priority} /><span className="chip">{o.status}</span>{o.dataOrigin === 'Synthetic' && <DemoBadge />}</>}
+        badges={<><PriorityBadge priority={o.priority} /><span className="chip">{o.status}</span>{o.dataClassification === 'SYNTHETIC' && <DemoBadge />}</>}
         actions={<>
           <button onClick={() => showIn3D(o.zoneId)} className="btn btn-secondary"><Box className="size-4" aria-hidden="true" />Show zone in 3D</button>
           {o.machineId && <button onClick={() => showIn3D(o.machineId!)} className="btn btn-secondary"><Box className="size-4" aria-hidden="true" />Show {o.machineId} in 3D</button>}

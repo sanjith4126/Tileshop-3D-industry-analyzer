@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using TileTwin.Api.Configuration;
 using TileTwin.Api.Services;
 using TileTwin.Domain;
+using TileTwin.Domain.Production;
 using TileTwin.Infrastructure.Data;
 using TileTwin.Infrastructure.Llm;
 using TileTwin.Infrastructure.Seeding;
@@ -59,11 +60,12 @@ public class AdminController(UserAdminService userAdmin, TileTwinDbContext db, D
 /// <summary>Aggregated numbers for the Overview page and configuration status of every optional component.</summary>
 [ApiController, Route("api/overview")]
 public class OverviewController(MachineService machines, TileTwinDbContext db, AppConfig config, IWebHostEnvironment env,
-    MlStatus ml, TileInspectionService tiles, ILlmProvider llm, IEmbeddingProvider embeddings) : ControllerBase
+    MlStatus ml, TileInspectionService tiles, ILlmProvider llm, IEmbeddingProvider embeddings, TimeProvider clock) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> Get(CancellationToken ct)
     {
+        var now = clock.GetUtcNow().UtcDateTime;
         var list = await machines.ListAsync(ct: ct);
         var alerts = await db.Alerts.AsNoTracking().Where(a => a.Status != AlertStatus.Resolved).Select(a => a.Severity).ToListAsync(ct);
         var highObs = await db.InspectionObservations.AsNoTracking().CountAsync(o =>
@@ -73,27 +75,31 @@ public class OverviewController(MachineService machines, TileTwinDbContext db, A
             .Select(a => new { a.MachineId, a.Score, a.Threshold, a.TimestampUtc, a.ModelVersion }).FirstOrDefaultAsync(ct);
         var demo = await db.DemoState.AsNoTracking().SingleOrDefaultAsync(ct);
         var tile = await tiles.StatusAsync(ct);
-        // Production quality, last 7 days (per day of batch start), from the production batch records.
-        var since = DateTime.UtcNow.Date.AddDays(-6);
+        // Production quality, last 7 days (per day of batch start), from the production batch records. Every day is
+        // listed; a day or week without batches has no rate (null) — the UI says so instead of showing 0 %.
+        var since = now.Date.AddDays(-6);
         var batches = await db.ProductionBatches.AsNoTracking().Where(b => b.StartedUtc >= since)
             .Select(b => new { b.StartedUtc, b.UnitsProduced, b.UnitsRejected }).ToListAsync(ct);
-        static double Rate(int units, int rejected) => units == 0 ? 0 : Math.Round(100.0 * rejected / units, 2);
-        var days = batches.GroupBy(b => b.StartedUtc.Date).OrderBy(g => g.Key).Select(g => new
+        var days = Enumerable.Range(0, 7).Select(i => since.AddDays(i)).Select(d =>
         {
-            day = g.Key.ToString("yyyy-MM-dd"), units = g.Sum(b => b.UnitsProduced), rejected = g.Sum(b => b.UnitsRejected),
-            ratePercent = Rate(g.Sum(b => b.UnitsProduced), g.Sum(b => b.UnitsRejected)),
+            var of = batches.Where(b => b.StartedUtc.Date == d).ToList();
+            int units = of.Sum(b => b.UnitsProduced), rejected = of.Sum(b => b.UnitsRejected);
+            return new { day = d.ToString("yyyy-MM-dd"), units, rejected, ratePercent = ProductionQuality.RejectRatePercent(units, rejected) };
         }).ToList();
+        int produced = days.Sum(d => d.units), rejectedTotal = days.Sum(d => d.rejected);
 
         return Ok(new
         {
+            dataClassification = PlantData.Classification,
+            generatedAt = now,
             statusCounts = Enum.GetValues<MachineStatus>().ToDictionary(s => s.ToString(), s => list.Count(m => m.Status == s)),
             openAlerts = new { total = alerts.Count, critical = alerts.Count(s => s == AlertSeverity.Critical) },
             openHighPriorityObservations = highObs,
             latestAnomaly = latest,
             production = new
             {
-                units = days.Sum(d => d.units), rejected = days.Sum(d => d.rejected),
-                ratePercent = Rate(days.Sum(d => d.units), days.Sum(d => d.rejected)), days,
+                fromUtc = since, toUtc = now,
+                units = produced, rejected = rejectedTotal, ratePercent = ProductionQuality.RejectRatePercent(produced, rejectedTotal), days,
             },
             config = new
             {

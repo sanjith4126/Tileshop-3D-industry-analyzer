@@ -10,7 +10,7 @@
 | 2. Conformance audit | ✅ done 2026-10-30; gate passed by the owner's instruction "do everything all the phases" (D1–D8 taken as recommended, D2: keep features — to confirm in the final report) | [`docs/CONFORMANCE_REPORT.md`](CONFORMANCE_REPORT.md): 352 rows — 57 CONFORMS, 187 PARTIAL, 74 MISSING, 34 VIOLATES; open rows by priority P0 48, P1 85, P2 95, P3 42, P4 25. Evidence: [`conformance/probes-2026-10-30.txt`](conformance/probes-2026-10-30.txt) |
 | 3. Safety net | ✅ done 2026-10-31 — gate passed: CI green on unchanged code ([run 41220869747](https://github.com/sanjith4126/Tileshop-3D-industry-analyzer/actions/runs/41220869747), all four jobs) | `.github/workflows/ci.yml` (backend on PostgreSQL, frontend, ML, e2e = API smoke + Playwright); `backend/TileTwin.Architecture.Tests` (5 rules, report-only); `backend/TileTwin.Tests/Integration/CharacterizationTests.cs`; `e2e/` Playwright smoke (2 tests). The first two CI runs failed in the e2e job: the CI dev password broke the Identity policy (no upper-case letter), so no dev user could sign in; fixed in `27ef6cf` |
 | 4. Remediation plan | ✅ done 2026-10-31; approved by the owner's instruction of 2026-10-30 ("do everything all the phases") with D1–D8 as recommended (D2: keep features) | [`docs/REMEDIATION_PLAN.md`](REMEDIATION_PLAN.md): 33 slices S01–S33 + exception EX-01 cover all 295 open rows (`python scripts/assign_slices.py` checks the mapping); [`docs/EXCEPTIONS.md`](EXCEPTIONS.md) |
-| 5. Remediation | in progress 2026-10-31 — S01 (honest data) first | |
+| 5. Remediation | in progress 2026-10-31 | S01 honest data ✅ (rows 2-01, 2-02, 2-03, 2-07, 2-08, 2-11, 7-06 CONFORMS; 13-09 partly, rest in S23). Tests: backend 108 + architecture 5, frontend 20. [`CHANGELOG.md`](../CHANGELOG.md) lists the behaviour changes |
 | 6–10 | not started | |
 
 No application code was changed in Phases 1–3 (Phase 3 fixed a same-second flake in a test only).
@@ -115,6 +115,7 @@ health checks; `.env.example`; README.
 - **Live simulator** (`SimulatorHostedService` → `SimulationEngine`): every 5 s writes one synthetic
   reading per live sensor (continues the HP-002 drift; PUMP-002 flow gap persists; machines flagged
   offline get none). On startup it backfills the downtime gap at 1-min resolution (max 7 days).
+  *Superseded 2026-10-31 (S01): downtime is no longer back-filled; it stays a visible gap.*
   Pause/resume: `GET/PUT /api/admin/simulator` (Admin). Disabled in tests via `Simulator__Enabled=false`.
 - **Threshold alerts** (`AlertDetector`, domain, unit-tested): crossing a warning/critical limit opens an
   alert (value, threshold, detected UTC); no duplicate for the same machine+sensor+severity while
@@ -289,6 +290,7 @@ health checks; `.env.example`; README.
   Now the first tick fills every missing minute of the last 7 days and each later tick fills any gap
   since the last reading (except right after an admin pause). Verified: 715 minutes backfilled, scoring
   resumed (14 scored, HP-002 anomalous). Both modes have integration tests.
+  *Superseded 2026-10-31 (S01): back-filling hid outages (prime directive 2), so it was removed.*
 - No placeholder pages remain (only the 404 page).
 
 ## Milestone 12 — test pass, docs, rehearsal ✅

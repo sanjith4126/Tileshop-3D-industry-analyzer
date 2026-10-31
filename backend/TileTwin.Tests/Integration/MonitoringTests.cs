@@ -64,12 +64,14 @@ public class MonitoringTests(ApiFactory factory)
         var r = await client.GetFromJsonAsync<ReadingsResponse>("/api/machines/MACHINE-HP-002/readings?range=24h", Json);
 
         Assert.Equal(300, r!.BucketSeconds);
+        Assert.Equal("SYNTHETIC", r.DataClassification);
         Assert.Equal(4, r.Sensors.Count);
         var vib = r.Sensors.Single(s => s.SensorId == "SENSOR-HP-002-VIB");
         Assert.Equal(7.1, vib.CriticalMax);
-        Assert.InRange(vib.Points.Count, 250, 290);
-        Assert.True(vib.Points[^1].Max > vib.Points[0].Max);   // drift upward over the day
-        Assert.All(vib.Points, p => Assert.True(p.Min <= p.Avg && p.Avg <= p.Max));
+        Assert.InRange(vib.Points.Count, 288, 289);            // every 5-minute bucket of the day
+        var filled = vib.Points.Where(p => p.Count > 0).ToList();
+        Assert.True(filled[^1].Max > filled[0].Max);           // drift upward over the day
+        Assert.All(filled, p => Assert.True(p.Min <= p.Avg && p.Avg <= p.Max));
 
         Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync("/api/machines/MACHINE-HP-002/readings?range=2y")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/api/machines/NOPE/readings?range=1h")).StatusCode);
@@ -83,7 +85,7 @@ public class MonitoringTests(ApiFactory factory)
         var engine = scope.ServiceProvider.GetRequiredService<SimulationEngine>();
         var now = DateTime.UtcNow;
 
-        var written = (await engine.TickAsync(now, SimulationEngine.Backfill.None)).Written;
+        var written = (await engine.TickAsync(now)).Written;
 
         var atNow = await db.SensorReadings.Where(r => r.TimestampUtc == now).ToListAsync();
         Assert.Equal(written, atNow.Count);
@@ -96,7 +98,7 @@ public class MonitoringTests(ApiFactory factory)
     }
 
     [Fact]
-    public async Task Simulator_backfills_a_gap_at_one_minute_resolution()
+    public async Task Simulator_never_backfills_downtime()
     {
         using var scope = factory.Services.CreateScope();
         var db = factory.CreateDbContext(scope);
@@ -105,36 +107,34 @@ public class MonitoringTests(ApiFactory factory)
         // Whole seconds (PostgreSQL stores microseconds), one second ahead so readings written by an earlier test
         // in the same second are not counted inside this test's window.
         start = new DateTime(start.Ticks - start.Ticks % TimeSpan.TicksPerSecond, DateTimeKind.Utc).AddSeconds(1);
-        await engine.TickAsync(start, SimulationEngine.Backfill.None);
         var later = start.AddMinutes(10);                 // e.g. the PC slept for 10 minutes
         try
         {
-            var r = await engine.TickAsync(later, SimulationEngine.Backfill.SinceLast);
-            var minutes = await db.SensorReadings.Where(x => x.SensorId == "SENSOR-HP-001-PRES" && x.TimestampUtc > start && x.TimestampUtc <= later)
+            await engine.TickAsync(start);
+            var r = await engine.TickAsync(later);
+            var stamps = await db.SensorReadings.Where(x => x.SensorId == "SENSOR-HP-001-PRES" && x.TimestampUtc > start && x.TimestampUtc <= later)
                 .Select(x => x.TimestampUtc).ToListAsync();
-            Assert.Equal(10, minutes.Count);              // 9 backfilled minutes + the live point
-            Assert.Equal(46 * 10, r.Written);
+            Assert.Equal([later], stamps);                // the live point only: the 10 minutes stay a gap
+            Assert.Equal(46, r.Written);
         }
         finally
         {
-            await db.SensorReadings.Where(x => x.TimestampUtc > start).ExecuteDeleteAsync();
+            await db.SensorReadings.Where(x => x.TimestampUtc >= start).ExecuteDeleteAsync();
         }
     }
 
     [Fact]
-    public async Task Startup_hole_scan_fills_missing_minutes_inside_history()
+    public async Task Readings_keep_gaps_as_empty_buckets()
     {
-        using var scope = factory.Services.CreateScope();
-        var db = factory.CreateDbContext(scope);
-        var engine = scope.ServiceProvider.GetRequiredService<SimulationEngine>();
-        var now = DateTime.UtcNow;
-        var holeFrom = now.AddMinutes(-40);
-        var holeTo = now.AddMinutes(-30);
-        await db.SensorReadings.Where(r => r.TimestampUtc > holeFrom && r.TimestampUtc < holeTo).ExecuteDeleteAsync();
+        // PUMP-002's flow sensor stopped reporting 45 minutes before the seed anchor (scripted gap).
+        var r = await factory.CreateClient().GetFromJsonAsync<ReadingsResponse>("/api/machines/MACHINE-PUMP-002/readings?range=1h", Json);
 
-        await engine.TickAsync(now, SimulationEngine.Backfill.Holes);
-
-        var refilled = await db.SensorReadings.CountAsync(r => r.SensorId == "SENSOR-HP-001-PRES" && r.TimestampUtc > holeFrom && r.TimestampUtc < holeTo);
-        Assert.InRange(refilled, 9, 10);
+        Assert.Equal(60, r!.BucketSeconds);
+        var flow = r.Sensors.Single(s => s.SensorId == "SENSOR-PUMP-002-FLOW");
+        Assert.InRange(flow.Points.Count, 60, 61);        // every bucket of the hour is present...
+        Assert.All(flow.Points.Zip(flow.Points.Skip(1)), x => Assert.Equal(TimeSpan.FromMinutes(1), x.Second.T - x.First.T));
+        Assert.Contains(flow.Points, p => p.Count > 0);
+        var gap = flow.Points.TakeLast(40).ToList();      // ...and the gap is empty buckets, not interpolated values
+        Assert.All(gap, p => Assert.True(p.Count == 0 && p.Avg is null && p.Min is null && p.Max is null));
     }
 }

@@ -9,11 +9,12 @@ namespace TileTwin.Infrastructure.Simulation;
 
 /// <summary>
 /// Writes live synthetic readings (continuing the scripted patterns) and opens threshold alerts.
-/// Machines flagged offline get no readings; the PUMP-002 flow sensor keeps its gap.
+/// Machines flagged offline get no readings; the PUMP-002 flow sensor keeps its gap. A tick writes the live point
+/// only: time the simulator was not running (paused, stopped, PC asleep) stays a visible gap — it is never
+/// back-filled (prime directive 2). History is generated only by the seeder ("Reset demo data").
 /// </summary>
 public class SimulationEngine(TileTwinDbContext db, ILogger<SimulationEngine> log)
 {
-    public static readonly TimeSpan MaxBackfill = TimeSpan.FromDays(7);
     /// <summary>Serialises simulator ticks with "Reset demo data" so they never interleave.</summary>
     public static readonly SemaphoreSlim DemoLock = new(1, 1);
     static readonly Random Rng = new(); // ticks are sequential (one hosted service)
@@ -24,19 +25,15 @@ public class SimulationEngine(TileTwinDbContext db, ILogger<SimulationEngine> lo
 
     public sealed record TickResult(int Written, bool Paused);
 
-    /// <summary>None: live point only. SinceLast: fill a gap of more than 2 minutes after the latest reading
-    /// (cheap, every tick). Holes: fill every missing minute of the last 7 days (startup, after PC sleep).</summary>
-    public enum Backfill { None, SinceLast, Holes }
-
-    /// <summary>One tick: a live reading per sensor, plus backfilled minutes at 1-minute resolution so ML windows stay complete.</summary>
-    public async Task<TickResult> TickAsync(DateTime nowUtc, Backfill backfill, CancellationToken ct = default)
+    /// <summary>One tick: a live reading per sensor at <paramref name="nowUtc"/>.</summary>
+    public async Task<TickResult> TickAsync(DateTime nowUtc, CancellationToken ct = default)
     {
         await DemoLock.WaitAsync(ct);
-        try { return await TickCoreAsync(nowUtc, backfill, ct); }
+        try { return await TickCoreAsync(nowUtc, ct); }
         finally { DemoLock.Release(); }
     }
 
-    async Task<TickResult> TickCoreAsync(DateTime nowUtc, Backfill backfill, CancellationToken ct)
+    async Task<TickResult> TickCoreAsync(DateTime nowUtc, CancellationToken ct)
     {
         var state = await db.DemoState.AsNoTracking().SingleOrDefaultAsync(ct);
         if (state is null) return new(0, false);
@@ -48,14 +45,8 @@ public class SimulationEngine(TileTwinDbContext db, ILogger<SimulationEngine> lo
         var live = sensors.Where(s => Specs.ContainsKey(s.Id) && SignalModel.HasLiveReading(s.MachineId, Specs[s.Id].Spec.Suffix)).ToList();
         if (live.Count == 0) return new(0, false);
 
-        var times = backfill switch
-        {
-            Backfill.SinceLast => await SinceLastAsync(live[0].MachineId, live[0].Id, nowUtc, ct),
-            Backfill.Holes => await HolesAsync(live[0].MachineId, live[0].Id, nowUtc, ct),
-            _ => [nowUtc],
-        };
-        var rows = times.SelectMany(t => live.Select(s =>
-            new ReadingRow(s.MachineId, s.Id, SignalModel.Value(s.MachineId, Specs[s.Id].Spec, t, state.AnchorUtc, Rng), t))).ToList();
+        var rows = live.Select(s =>
+            new ReadingRow(s.MachineId, s.Id, SignalModel.Value(s.MachineId, Specs[s.Id].Spec, nowUtc, state.AnchorUtc, Rng), nowUtc)).ToList();
 
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         await ReadingWriter.CopyAsync(db, rows, ct);
@@ -73,39 +64,6 @@ public class SimulationEngine(TileTwinDbContext db, ILogger<SimulationEngine> lo
 
         foreach (var a in alerts)
             log.LogInformation("Alert opened: {Severity} {Sensor} = {Value} (limit {Threshold})", a.Severity, a.SensorId, a.ObservedValue, a.Threshold);
-        if (times.Count > 1)
-            log.LogInformation("Simulator backfilled {Minutes} minutes ({Rows} readings)", times.Count - 1, rows.Count);
         return new(rows.Count, false);
     }
-
-    async Task<List<DateTime>> SinceLastAsync(string machineId, string sensorId, DateTime now, CancellationToken ct)
-    {
-        var last = await db.SensorReadings.Where(r => r.MachineId == machineId && r.SensorId == sensorId)
-            .MaxAsync(r => (DateTime?)r.TimestampUtc, ct);
-        var times = new List<DateTime>();
-        if (last is { } l && now - l > TimeSpan.FromMinutes(2))
-        {
-            var start = l > now - MaxBackfill ? l : now - MaxBackfill;
-            for (var t = start.AddMinutes(1); t < now; t = t.AddMinutes(1)) times.Add(t);
-        }
-        times.Add(now);
-        return times;
-    }
-
-    /// <summary>Minutes of the last 7 days (after the seeded history starts) with no reading on the reference sensor.</summary>
-    async Task<List<DateTime>> HolesAsync(string machineId, string sensorId, DateTime now, CancellationToken ct)
-    {
-        var from = now - MaxBackfill;
-        var stamps = await db.SensorReadings.Where(r => r.MachineId == machineId && r.SensorId == sensorId && r.TimestampUtc >= from)
-            .Select(r => r.TimestampUtc).ToListAsync(ct);
-        if (stamps.Count == 0) return [now];
-        var have = stamps.Select(Minute).ToHashSet();
-        var times = new List<DateTime>();
-        for (var t = Minute(stamps.Min()).AddMinutes(1); t < Minute(now); t = t.AddMinutes(1))
-            if (!have.Contains(t)) times.Add(t);
-        times.Add(now);
-        return times;
-    }
-
-    static DateTime Minute(DateTime t) => new(t.Ticks - t.Ticks % TimeSpan.TicksPerMinute, DateTimeKind.Utc);
 }

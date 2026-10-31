@@ -13,18 +13,31 @@ public sealed record MachineSummaryDto(
     string Id, string Name, string TypeId, string TypeName, string ZoneId, string ZoneName,
     MachineStatus Status, IReadOnlyList<string> StatusReasons,
     MaintenanceStatus MaintenanceStatus, bool IsFlaggedOffline,
-    string Manufacturer, string Model, DataOrigin DataOrigin, DateTime? LastReadingUtc, int OpenAlertCount);
+    string Manufacturer, string Model, DataOrigin DataOrigin, DateTime? LastReadingUtc, int OpenAlertCount)
+{
+    public string DataClassification => PlantData.Classification;
+}
 
 public sealed record MaintenanceRecordDto(
     Guid Id, string MachineId, MaintenanceType Type, string Description, string? PerformedBy,
-    DateTime PerformedUtc, double DurationHours, string? Outcome, DataOrigin DataOrigin);
+    DateTime PerformedUtc, double DurationHours, string? Outcome, DataOrigin DataOrigin)
+{
+    public string DataClassification => PlantData.Classification;
+}
 
+/// <summary>Snapshot of one machine at GeneratedAt.</summary>
 public sealed record MachineDetailDto(
-    MachineSummaryDto Machine, IReadOnlyList<SensorDto> Sensors, IReadOnlyList<MaintenanceRecordDto> RecentMaintenance);
+    MachineSummaryDto Machine, IReadOnlyList<SensorDto> Sensors, IReadOnlyList<MaintenanceRecordDto> RecentMaintenance, DateTime GeneratedAt)
+{
+    public string DataClassification => PlantData.Classification;
+}
 
 public sealed record ZoneDto(
     string Id, string Name, string? Description, int MachineCount,
-    IReadOnlyDictionary<MachineStatus, int> StatusCounts, DataOrigin DataOrigin);
+    IReadOnlyDictionary<MachineStatus, int> StatusCounts, DataOrigin DataOrigin)
+{
+    public string DataClassification => PlantData.Classification;
+}
 
 public sealed record UpdateMachineStateRequest(
     [Required] MaintenanceStatus? MaintenanceStatus,

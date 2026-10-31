@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using TileTwin.Api.Dtos;
 using TileTwin.Domain;
 using TileTwin.Domain.Inspections;
@@ -76,13 +77,14 @@ public class InspectionTests(ApiFactory factory)
     public async Task Summary_cites_open_high_priority_glazing_items()
     {
         var res = await factory.CreateClient().PostAsJsonAsync("/api/inspection/summary", new InspectionSummaryRequest(Glaze), Json);
-        var s = await res.Content.ReadFromJsonAsync<InspectionSummary>(Json);
+        var body = await res.Content.ReadAsStringAsync();
+        var s = JsonSerializer.Deserialize<InspectionSummary>(body, Json);
 
         Assert.StartsWith("Glazing & Inspection", s!.Scope);
         Assert.True(s.OpenHighPriority.Count >= 2);
         Assert.Contains(s.OpenHighPriority, h => h.Priority == ObservationPriority.Critical);
         Assert.Contains(s.OpenHighPriority[0].Code, string.Join(" ", s.Lines));
-        Assert.True(s.ContainsSyntheticData);
+        Assert.Contains("\"dataClassification\":\"SYNTHETIC\"", body);
         Assert.Equal(HttpStatusCode.NotFound,
             (await factory.CreateClient().PostAsJsonAsync("/api/inspection/summary", new InspectionSummaryRequest("ZONE-NOPE"), Json)).StatusCode);
     }

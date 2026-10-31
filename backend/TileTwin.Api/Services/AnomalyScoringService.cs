@@ -120,7 +120,7 @@ public class AnomalyHostedService(IServiceScopeFactory scopes, ILogger<AnomalyHo
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
-        await Task.Delay(TimeSpan.FromSeconds(15), ct); // let the simulator backfill first
+        await Task.Delay(TimeSpan.FromSeconds(15), ct); // let the simulator write its first live readings
         using var timer = new PeriodicTimer(Interval);
         do
         {

@@ -31,7 +31,7 @@ export function SummaryPanel({ zoneId, zoneName }: { zoneId: string | null; zone
         <article aria-label="Inspection summary" className="space-y-1.5 rounded-lg border border-line bg-sunken p-4">
           <header className="mb-2 flex flex-wrap items-center gap-2 text-xs text-muted">
             <span>{s.scope} · generated {formatUtc(s.generatedUtc)}</span>
-            {s.containsSyntheticData && <DemoBadge />}
+            {s.dataClassification === 'SYNTHETIC' && <DemoBadge />}
           </header>
           {s.lines.map((l, i) => <p key={i} className={i === s.lines.length - 1 ? 'text-xs text-subtle' : 'text-fg'}>{l}</p>)}
           {s.focusEntityIds.length > 0 && (

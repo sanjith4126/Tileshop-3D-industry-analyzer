@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using TileTwin.Api.Services;
+using TileTwin.Domain;
 using TileTwin.Domain.Entities;
 using TileTwin.Infrastructure.Data;
 
@@ -18,7 +19,10 @@ public interface IWorkflow
 }
 
 public sealed record WorkflowExecutionDto(Guid Id, string Type, WorkflowStatus Status, string? UserName, DateTime StartedUtc,
-    DateTime? CompletedUtc, string? Error, JsonElement Input, JsonElement? Output);
+    DateTime? CompletedUtc, string? Error, JsonElement Input, JsonElement? Output)
+{
+    public string DataClassification => PlantData.Classification;
+}
 
 /// <summary>Runs a workflow and records it in WorkflowExecutions + AuditLog, whatever the outcome.</summary>
 public class WorkflowRunner(IEnumerable<IWorkflow> workflows, TileTwinDbContext db, AuditLogger audit, TimeProvider clock, ILogger<WorkflowRunner> log)

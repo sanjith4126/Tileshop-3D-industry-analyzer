@@ -29,7 +29,7 @@ export default function MachineDetailPage() {
       <PageHeader
         eyebrow={<><Link to="/monitoring" className="link">Machine Monitoring</Link> / <span className="font-mono normal-case">{m.id}</span></>}
         title={m.name}
-        badges={<><StatusBadge status={m.status} size="md" />{m.dataOrigin === 'Synthetic' && <DemoBadge />}</>}
+        badges={<><StatusBadge status={m.status} size="md" />{m.dataClassification === 'SYNTHETIC' && <DemoBadge />}</>}
         description={`${m.typeName} · ${m.zoneName} · maintenance: ${m.maintenanceStatus} · last reading ${formatUtc(m.lastReadingUtc)}`}
         actions={<>
           <button onClick={() => { focusEntity(m.id); navigate('/twin') }} className="btn btn-secondary"><Box className="size-4" aria-hidden="true" />Show in 3D</button>

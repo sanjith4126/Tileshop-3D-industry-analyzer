@@ -59,7 +59,7 @@ public class CharacterizationTests(ApiFactory factory)
         {
             Assert.Equal(HttpStatusCode.NoContent, (await admin.PutAsJsonAsync("/api/admin/simulator", new SimulatorUpdateRequest(true), Json)).StatusCode);
             Assert.True((await admin.GetFromJsonAsync<SimulatorStateDto>("/api/admin/simulator", Json))!.Paused);
-            var paused = await engine.TickAsync(DateTime.UtcNow, SimulationEngine.Backfill.None);
+            var paused = await engine.TickAsync(DateTime.UtcNow);
             Assert.True(paused.Paused);
             Assert.Equal(0, paused.Written);
         }
@@ -67,7 +67,7 @@ public class CharacterizationTests(ApiFactory factory)
         {
             Assert.Equal(HttpStatusCode.NoContent, (await admin.PutAsJsonAsync("/api/admin/simulator", new SimulatorUpdateRequest(false), Json)).StatusCode);
         }
-        var resumed = await engine.TickAsync(DateTime.UtcNow, SimulationEngine.Backfill.None);
+        var resumed = await engine.TickAsync(DateTime.UtcNow);
         Assert.False(resumed.Paused);
         Assert.True(resumed.Written > 0);
 

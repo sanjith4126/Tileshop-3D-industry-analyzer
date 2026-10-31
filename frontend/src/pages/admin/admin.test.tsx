@@ -8,7 +8,7 @@ import AdminPage from './AdminPage'
 afterEach(() => vi.unstubAllGlobals())
 
 const overview: Overview = {
-  statusCounts: {}, openAlerts: { total: 3, critical: 1 }, openHighPriorityObservations: 7,
+  dataClassification: 'SYNTHETIC', generatedAt: '2026-10-24T08:00:00Z', statusCounts: {}, openAlerts: { total: 3, critical: 1 }, openHighPriorityObservations: 7,
   latestAnomaly: { machineId: 'MACHINE-HP-002', score: 0.56, threshold: 0.53, timestampUtc: '2026-10-24T08:00:00Z', modelVersion: 'iforest-1.1' },
   config: {
     ai: false, ml: { available: true, message: 'ok', lastCheckedUtc: '2026-10-24T08:00:00Z' },

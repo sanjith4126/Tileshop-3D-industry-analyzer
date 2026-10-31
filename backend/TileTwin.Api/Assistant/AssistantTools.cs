@@ -5,6 +5,7 @@ using TileTwin.Api.Services;
 using TileTwin.Domain;
 using TileTwin.Domain.Entities;
 using TileTwin.Domain.Inspections;
+using TileTwin.Domain.Production;
 using TileTwin.Infrastructure.Data;
 using TileTwin.Infrastructure.Llm;
 
@@ -133,7 +134,7 @@ public class AssistantTools(TileTwinDbContext db, MachineService machines, Alert
     {
         var from = clock.GetUtcNow().UtcDateTime.AddDays(-days);
         var b = await db.ProductionBatches.AsNoTracking().Where(x => x.StartedUtc >= from).ToListAsync(ct);
-        double Rate(IEnumerable<ProductionBatch> x) => x.Sum(y => y.UnitsProduced) is var n and > 0 ? Math.Round(100.0 * x.Sum(y => y.UnitsRejected) / n, 2) : 0;
+        double? Rate(IEnumerable<ProductionBatch> x) => ProductionQuality.RejectRatePercent(x.Sum(y => y.UnitsProduced), x.Sum(y => y.UnitsRejected));
         return new
         {
             days, batches = b.Count, unitsProduced = b.Sum(x => x.UnitsProduced), unitsRejected = b.Sum(x => x.UnitsRejected), rejectRatePercent = Rate(b),

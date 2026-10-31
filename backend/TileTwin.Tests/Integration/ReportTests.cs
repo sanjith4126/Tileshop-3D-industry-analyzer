@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using TileTwin.Api.Reports;
 using TileTwin.Domain;
 using TileTwin.Domain.Entities;
@@ -34,9 +35,10 @@ public class ReportTests(ApiFactory factory)
         var client = await SignedIn();
         var res = await client.PostAsJsonAsync("/api/reports", new ReportRequest(type, null, null, null, null), Json);
         Assert.Equal(HttpStatusCode.Created, res.StatusCode);
-        var r = (await res.Content.ReadFromJsonAsync<ReportDto>(Json))!;
+        var body = await res.Content.ReadAsStringAsync();
+        var r = JsonSerializer.Deserialize<ReportDto>(body, Json)!;
 
-        Assert.True(r.Document.ContainsSyntheticData);
+        Assert.Contains("\"dataClassification\":\"SYNTHETIC\"", body);
         Assert.NotEmpty(r.Document.Summary);
         Assert.NotEmpty(r.Document.Recommendations);
         var all = string.Join(" ", r.Document.Sections.SelectMany(s => (s.Table?.Rows ?? []).SelectMany(x => x)));

@@ -10,7 +10,10 @@ namespace TileTwin.Api.Services;
 
 public sealed record TileInspectionDto(Guid Id, string OriginalFileName, string ContentType, long SizeBytes, string? UploadedBy, DateTime UploadedUtc,
     TileResultStatus Outcome, string? Label, double? Confidence, IReadOnlyDictionary<string, double>? Probabilities,
-    string? ModelName, string? ModelVersion, string? Message, string ImageUrl);
+    string? ModelName, string? ModelVersion, string? Message, string ImageUrl)
+{
+    public string DataClassification => PlantData.Classification;
+}
 
 public sealed record TileModelStatusDto(bool MlAvailable, bool Configured, string Status, IReadOnlyList<string>? Labels, JsonElement? ModelCard);
 
