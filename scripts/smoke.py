@@ -101,12 +101,16 @@ def main() -> int:
     check(s == 200 and any(a["severity"] == "Critical" for a in alerts), "B: HP-002 has a critical threshold alert")
     s, p = j("GET", "/api/predictive/MACHINE-HP-002")
     check(s == 200 and p["reviewLabel"].startswith("Suggestion") and p["suggestedActions"], "B: predictive suggestions with review label")
+    eng = login("MaintenanceEngineer")
+    check(eng is not None, "Dev user sign-in works (DEV_SEED_USER_PASSWORD)")
+    if p and p["latestScore"] is None:
+        # Scheduled scoring runs every few minutes; right after start-up press "Score now" like a user would.
+        j("POST", "/api/predictive/MACHINE-HP-002/score", None, eng)
+        s, p = j("GET", "/api/predictive/MACHINE-HP-002")
     if p and p["ml"]["available"]:
         check(p["latestScore"] is not None, "B: ML anomaly score present (ML service reachable)")
     else:
         check(p is not None and p["latestScore"] is None, "B: ML unavailable is reported honestly (no score)")
-    eng = login("MaintenanceEngineer")
-    check(eng is not None, "Dev user sign-in works (DEV_SEED_USER_PASSWORD)")
     s, w = j("POST", "/api/workflows/maintenance-prioritisation", {"zoneId": None, "createReport": True, "aiWording": False}, eng)
     out = (w or {}).get("output") or {}
     check(s == 200 and out.get("ranking", [{}])[0].get("machineId") == "MACHINE-HP-002", "B: prioritisation workflow ranks HP-002 first")
