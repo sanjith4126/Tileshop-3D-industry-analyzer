@@ -114,7 +114,7 @@ jobs:
     env:
       ASPNETCORE_ENVIRONMENT: Development
       ML_SERVICE_URL: http://127.0.0.1:8001
-      DEV_SEED_USER_PASSWORD: ci-only-dev-password-123
+      DEV_SEED_USER_PASSWORD: Ci-Only-Dev-Password-123  # Identity policy: 12+ chars, upper, lower, digit, symbol
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4

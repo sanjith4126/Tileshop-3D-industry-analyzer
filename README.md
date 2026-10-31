@@ -51,7 +51,7 @@ Edit `.env` and set at least:
 |---|---|
 | `POSTGRES_PASSWORD` | any password; use the **same** value after `Password=` in `POSTGRES_CONNECTION` |
 | `JWT__SigningKey` | a long random value (≥ 32 chars), e.g. the output of `openssl rand -base64 48` (available in Git Bash) |
-| `DEV_SEED_USER_PASSWORD` | a password (≥ 12 chars) for the DEV ONLY users, needed to sign in |
+| `DEV_SEED_USER_PASSWORD` | a password (≥ 12 chars with upper case, lower case, a digit and a symbol) for the DEV ONLY users, needed to sign in |
 | `GROQ_API_KEY` + `LLM__Provider=groq` | optional AI assistant via Groq (default model `openai/gpt-oss-120b`) |
 | `ANTHROPIC_API_KEY`, `LLM__Model` | optional alternative: Claude (e.g. `claude-opus-5-5`). No AI key = **AI NOT CONFIGURED** |
 | `TILE_MODEL_PATH` | optional ONNX tile model; empty = **MODEL NOT CONFIGURED** |

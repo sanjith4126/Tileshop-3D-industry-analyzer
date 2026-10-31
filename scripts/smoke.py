@@ -9,6 +9,7 @@ a workflow execution and one tile-inspection upload (user-created rows, kept by 
 from __future__ import annotations
 
 import json
+import os
 import sys
 import urllib.error
 import urllib.request
@@ -54,6 +55,8 @@ def j(method, path, body=None, token=None):
 def check(ok: bool, label: str) -> None:
     results.append((bool(ok), label))
     print(("PASS " if ok else "FAIL ") + label)
+    if not ok and os.environ.get("GITHUB_ACTIONS") == "true":
+        print(f"::error title=API smoke::{label}")   # annotation, readable without access to the job log
 
 
 def login(role: str) -> str | None:
