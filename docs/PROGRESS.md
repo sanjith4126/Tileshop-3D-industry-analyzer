@@ -9,7 +9,9 @@
 | 1. Baseline | ✅ done 2026-10-30, tag `baseline` | [`docs/BASELINE.md`](BASELINE.md): versions, structure, build/run steps, test results (backend 85, frontend 17, ML 16, smoke 20/20, lint 0 errors), schema dump, OpenAPI snapshot, licences, known issues K1–K11, 15 screenshots at 1440 px |
 | 2. Conformance audit | ✅ report done 2026-10-30 — **gate: waiting for your review and decisions D1–D8** | [`docs/CONFORMANCE_REPORT.md`](CONFORMANCE_REPORT.md): 352 rows — 57 CONFORMS, 187 PARTIAL, 74 MISSING, 34 VIOLATES; open rows by priority P0 48, P1 85, P2 95, P3 42, P4 25. Evidence: [`conformance/probes-2026-10-30.txt`](conformance/probes-2026-10-30.txt) |
 | 3. Safety net | in progress 2026-10-31 — gate: CI green on unchanged code | `.github/workflows/ci.yml` (backend on PostgreSQL, frontend, ML, e2e = API smoke + Playwright); `backend/TileTwin.Architecture.Tests` (5 rules, report-only); `backend/TileTwin.Tests/Integration/CharacterizationTests.cs`; `e2e/` Playwright smoke (2 tests, local run passed) |
-| 4–10 | not started | |
+| 4. Remediation plan | ✅ done 2026-10-31; approved by the owner's instruction of 2026-10-30 ("do everything all the phases") with D1–D8 as recommended (D2: keep features) | [`docs/REMEDIATION_PLAN.md`](REMEDIATION_PLAN.md): 33 slices S01–S33 + exception EX-01 cover all 295 open rows (`python scripts/assign_slices.py` checks the mapping); [`docs/EXCEPTIONS.md`](EXCEPTIONS.md) |
+| 5. Remediation | next — S01 (honest data) first | |
+| 6–10 | not started | |
 
 No application code was changed in Phases 1–3 (Phase 3 fixed a same-second flake in a test only).
 
