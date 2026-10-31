@@ -1,0 +1,178 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  # CI-only database credentials for the throwaway service container (not a secret).
+  POSTGRES_CONNECTION: Host=localhost;Port=5432;Database=tiletwin;Username=tiletwin;Password=ci-only-password
+
+jobs:
+  backend:
+    name: Backend (build + xUnit on PostgreSQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: tiletwin
+          POSTGRES_USER: tiletwin
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U tiletwin -d tiletwin"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Random JWT signing key for this run
+        run: echo "JWT__SigningKey=$(openssl rand -base64 48)" >> "$GITHUB_ENV"
+      - run: dotnet tool restore
+      - run: dotnet build backend/TileTwin.slnx -c Release
+      - run: dotnet test backend/TileTwin.slnx -c Release --no-build --logger "trx" --results-directory TestResults
+      - name: Architecture report (report-only until Phase 7)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: architecture-report
+          path: backend/TileTwin.Architecture.Tests/bin/Release/net10.0/TestResults/architecture-report.txt
+          if-no-files-found: warn
+      - name: Test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: TestResults
+          if-no-files-found: warn
+
+  frontend:
+    name: Frontend (lint + Vitest + build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  ml:
+    name: ML service (pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: ml-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: ml-service/requirements.txt
+      - run: python -m pip install -r requirements.txt
+      - run: python -m pytest -q
+
+  e2e:
+    name: End to end (API smoke + Playwright)
+    needs: [backend, frontend, ml]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: tiletwin
+          POSTGRES_USER: tiletwin
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U tiletwin -d tiletwin"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      ASPNETCORE_ENVIRONMENT: Development
+      ML_SERVICE_URL: http://127.0.0.1:8001
+      DEV_SEED_USER_PASSWORD: ci-only-dev-password-123
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Write .env for this run (read by the API and scripts/smoke.py)
+        run: |
+          {
+            echo "POSTGRES_CONNECTION=$POSTGRES_CONNECTION"
+            echo "JWT__SigningKey=$(openssl rand -base64 48)"
+            echo "DEV_SEED_USER_PASSWORD=$DEV_SEED_USER_PASSWORD"
+            echo "ML_SERVICE_URL=$ML_SERVICE_URL"
+          } > .env
+      - name: Start API
+        run: |
+          dotnet tool restore
+          dotnet build backend/TileTwin.Api -c Release
+          nohup dotnet run --project backend/TileTwin.Api -c Release --no-build --no-launch-profile --urls http://localhost:5080 > api.log 2>&1 &
+      - name: Start ML service
+        run: |
+          python -m pip install -r ml-service/requirements.txt
+          cd ml-service && nohup python -m uvicorn app.main:app --port 8001 > ../ml.log 2>&1 &
+      - name: Build and serve frontend
+        run: |
+          cd frontend && npm ci && npm run build
+          nohup npx vite preview --port 5180 --strictPort > ../web.log 2>&1 &
+      - name: Wait for all services
+        run: |
+          for i in $(seq 1 150); do
+            if curl -sf http://localhost:5080/api/health > /dev/null && curl -sf http://127.0.0.1:8001/health > /dev/null && curl -sf http://localhost:5180/ > /dev/null; then
+              echo "ready after $((i * 2)) s"; exit 0
+            fi
+            sleep 2
+          done
+          tail -n 50 api.log ml.log web.log; exit 1
+      - name: API smoke (Scenarios A-D)
+        run: python scripts/smoke.py
+      - name: Playwright smoke
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npx playwright test
+      - name: Logs and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-output
+          path: |
+            api.log
+            ml.log
+            web.log
+            e2e/playwright-report
+            e2e/test-results
+          if-no-files-found: ignore

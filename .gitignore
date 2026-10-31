@@ -29,3 +29,7 @@ ml-service/models/*.joblib
 
 # Uploaded files
 App_Data/
+
+# Playwright (e2e/)
+test-results/
+playwright-report/

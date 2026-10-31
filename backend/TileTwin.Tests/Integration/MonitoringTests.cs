@@ -102,7 +102,9 @@ public class MonitoringTests(ApiFactory factory)
         var db = factory.CreateDbContext(scope);
         var engine = scope.ServiceProvider.GetRequiredService<SimulationEngine>();
         var start = DateTime.UtcNow;
-        start = new DateTime(start.Ticks - start.Ticks % TimeSpan.TicksPerSecond, DateTimeKind.Utc); // PostgreSQL stores microseconds
+        // Whole seconds (PostgreSQL stores microseconds), one second ahead so readings written by an earlier test
+        // in the same second are not counted inside this test's window.
+        start = new DateTime(start.Ticks - start.Ticks % TimeSpan.TicksPerSecond, DateTimeKind.Utc).AddSeconds(1);
         await engine.TickAsync(start, SimulationEngine.Backfill.None);
         var later = start.AddMinutes(10);                 // e.g. the PC slept for 10 minutes
         try
