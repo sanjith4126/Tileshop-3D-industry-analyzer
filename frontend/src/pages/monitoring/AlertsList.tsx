@@ -10,11 +10,11 @@ import { StatusBadge } from '../../components/StatusBadge'
 import { formatUtc } from '../../lib/status'
 
 function AlertRow({ alert }: { alert: Alert }) {
-  const { session, hasRole } = useAuth()
+  const { hasRole } = useAuth()
   const qc = useQueryClient()
   const [comment, setComment] = useState('')
   const act = useMutation({
-    mutationFn: (action: 'acknowledge' | 'resolve') => apiSend<Alert>('POST', `/api/alerts/${alert.id}/${action}`, { comment: comment || null }, session?.token ?? null),
+    mutationFn: (action: 'acknowledge' | 'resolve') => apiSend<Alert>('POST', `/api/alerts/${alert.id}/${action}`, { comment: comment || null }),
     onSuccess: () => {
       setComment('')
       qc.invalidateQueries({ queryKey: ['alerts'] })

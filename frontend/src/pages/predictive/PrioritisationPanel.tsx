@@ -25,7 +25,7 @@ export function PrioritisationPanel() {
   const navigate = useNavigate()
   const run = useMutation({
     mutationFn: (createReport: boolean) => apiSend<Execution>('POST', '/api/workflows/maintenance-prioritisation',
-      { zoneId: null, createReport, aiWording: true }, session?.token ?? null),
+      { zoneId: null, createReport, aiWording: true }),
   })
   const out = run.data?.output
   const ranked = out?.ranking.filter((r) => r.score > 0) ?? []

@@ -17,7 +17,7 @@ public sealed record CreateUserRequest(
 public sealed record UpdateUserRequest([Required] string Role, bool Disabled);
 
 /// <summary>Admin user management. There is no default admin password; admins create users explicitly.</summary>
-public class UserAdminService(UserManager<AppUser> users, AuditLogger audit, TileTwinDbContext db)
+public class UserAdminService(UserManager<AppUser> users, AuditLogger audit, TileTwinDbContext db, AuthService auth, ActiveUsers active)
 {
     public async Task<List<UserDto>> ListAsync()
     {
@@ -51,11 +51,13 @@ public class UserAdminService(UserManager<AppUser> users, AuditLogger audit, Til
         await users.AddToRoleAsync(user, req.Role);
         await users.SetLockoutEnabledAsync(user, true);
         await users.SetLockoutEndDateAsync(user, req.Disabled ? DateTimeOffset.MaxValue : null);
+        if (req.Disabled) await auth.RevokeAllAsync(user.Id, "user deactivated", CancellationToken.None);
+        active.Forget(user.Id); // the next request re-checks: a deactivated user's access token stops working now
         audit.Add(admin, "user.update", id, new { req.Role, req.Disabled });
         await db.SaveChangesAsync();
         return (await ToDto(user), null);
     }
 
     async Task<UserDto> ToDto(AppUser u) => new(u.Id, u.Email ?? "", u.DisplayName, (await users.GetRolesAsync(u)).ToList(),
-        u.LockoutEnd is { } end && end > DateTimeOffset.UtcNow.AddYears(10));
+        AuthService.IsDeactivated(u.LockoutEnd, DateTime.UtcNow));
 }

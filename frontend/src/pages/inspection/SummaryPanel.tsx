@@ -3,17 +3,15 @@ import { Box, FileText } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { apiSend } from '../../api/client'
 import type { InspectionSummary } from '../../api/types'
-import { useAuth } from '../../auth/auth'
 import { DemoBadge, ErrorState } from '../../components/States'
 import { formatUtc } from '../../lib/status'
 import { focusEntity } from '../../store/focus'
 
 /** "Generate inspection summary": deterministic text computed by the backend from records. */
 export function SummaryPanel({ zoneId, zoneName }: { zoneId: string | null; zoneName: string }) {
-  const { session } = useAuth()
   const navigate = useNavigate()
   const gen = useMutation({
-    mutationFn: () => apiSend<InspectionSummary>('POST', '/api/inspection/summary', { zoneId }, session?.token ?? null),
+    mutationFn: () => apiSend<InspectionSummary>('POST', '/api/inspection/summary', { zoneId }),
   })
   const s = gen.data
 

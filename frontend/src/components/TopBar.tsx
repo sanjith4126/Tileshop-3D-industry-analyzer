@@ -91,7 +91,7 @@ export function TopBar() {
   const detail = nav && pathname !== nav.to ? decodeURIComponent(pathname.slice(nav.to.length + 1)) : null
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-line bg-surface/80 px-5 backdrop-blur">
+    <header className="relative z-30 flex h-14 shrink-0 items-center justify-between gap-4 border-b border-line bg-surface/80 px-5 backdrop-blur">
       <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-[13px]">
         <span className="text-subtle">{nav?.group ?? 'TileTwin'}</span>
         <ChevronRight className="size-3.5 text-subtle" aria-hidden="true" />

@@ -22,22 +22,22 @@ Effort: S < ½ day, M ≤ 2 days, L more. **Slice** is assigned in Phase 4 (reme
 
 | Status | Rows | Share |
 |---|---:|---:|
-| CONFORMS | 65 | 18 % |
-| PARTIAL | 185 | 53 % |
-| MISSING | 73 | 21 % |
-| VIOLATES | 29 | 8 % |
+| CONFORMS | 73 | 21 % |
+| PARTIAL | 182 | 52 % |
+| MISSING | 70 | 20 % |
+| VIOLATES | 27 | 8 % |
 | NOT_APPLICABLE | 0 | 0 % |
 
 Open rows (everything not CONFORMS) by priority:
 
 | Priority | Meaning | PARTIAL | MISSING | VIOLATES | Total |
 |---|---|---:|---:|---:|---:|
-| P0 | data honesty, security, licences | 17 | 10 | 13 | 40 |
+| P0 | data honesty, security, licences | 14 | 7 | 11 | 32 |
 | P1 | policy correctness, data integrity, backend authority | 47 | 30 | 8 | 85 |
 | P2 | architecture, API, observability, performance, degraded modes | 68 | 22 | 5 | 95 |
 | P3 | design system, accessibility, UX, 3D twin | 38 | 1 | 3 | 42 |
 | P4 | documentation, ADRs, demo script | 15 | 10 | 0 | 25 |
-| **All** | | 185 | 73 | 29 | **287** |
+| **All** | | 182 | 70 | 27 | **279** |
 <!-- SUMMARY:END -->
 
 Counts at the baseline and now are identical, because Phase 2 changes no application code. Regenerate this block
@@ -313,16 +313,16 @@ destructive migrations, changing how the demo is accessed). The plan cannot be f
 | ID | Requirement | Status | Evidence | Gap | Priority | Effort | Slice |
 |---|---|---|---|---|---|---|---|
 | 12-01 | Passwords hashed with `PasswordHasher<T>`; minimum length 12 | CONFORMS | `Program.cs:26-33` Identity; `:28` `RequiredLength = 12` | — | — | — | — |
-| 12-02 | Reject a list of common passwords | MISSING | No password validator | — | P0 | S | S03 |
+| 12-02 | Reject a list of common passwords | CONFORMS | `CommonPasswordValidator` (`backend/TileTwin.Api/Services/AuthGuards.cs`) registered in `Program.cs`; test `AuthTests.Common_passwords_are_rejected` (S03) | — | — | — | S03 |
 | 12-03 | Same generic error for every login failure | CONFORMS | `Controllers.cs:94`; `AuthService.cs:21-28`; probe §2 `{"error":"Invalid email or password"}` | — | — | — | — |
-| 12-04 | Lock after 5 failures for 15 min | PARTIAL | Probe §6: locked after 5 failures; Identity default lockout 5 min (no options in `Program.cs:26-30`) | Duration 5 min | P0 | S | S03 |
-| 12-05 | Rate-limit login per IP and per account | PARTIAL | `Program.cs:93` per IP, 10/min; test `Login_is_rate_limited_per_client` | No per-account limit | P0 | S | S03 |
+| 12-04 | Lock after 5 failures for 15 min | CONFORMS | `Program.cs` Identity lockout: 5 failures, 15 min; test `AuthTests.Five_failures_lock_the_account_for_15_minutes` (S03) | — | — | — | S03 |
+| 12-05 | Rate-limit login per IP and per account | CONFORMS | Per IP: rate-limit policy `login` (10/min, `RateLimitTests`). Per account: `LoginThrottle` (10 per 5 min, any email), test `AuthTests.Login_attempts_are_limited_per_account` (S03) | — | — | — | S03 |
 | 12-06 | Audit every login attempt; never log the password | CONFORMS | `AuthService.cs:48,55` (`auth.login`, `auth.login-failed`) | — | — | — | — |
-| 12-07 | Access JWT 15 min, HS256 key ≥ 256 bits, `kid` header, 30 s clock skew | PARTIAL | `AuthService.cs:14` 8 h; probe §5 no `kid`; `Program.cs:38-45` default skew (5 min); key ≥ 32 chars (`AppConfig.cs:42`) ✓ | Lifetime, kid, skew | P0 | S | S03 |
-| 12-08 | Claims only `sub`, roles, `jti`, `iat`, `exp`, `iss`, `aud`; no email or name | VIOLATES | `AuthService.cs:35` `name` = email; probe §5 claims include `name`, no `jti` | Personal data in the token | P0 | S | S03 |
-| 12-09 | Rotating refresh tokens (hashed, reuse detection, 12 h) in an HttpOnly Secure SameSite=Strict cookie; access token in memory only | VIOLATES | No refresh endpoint; `frontend/src/auth/auth.tsx:22-25,39` session in `sessionStorage` | Token readable by scripts | P0 | M | S03 |
-| 12-10 | Deactivation revokes refresh tokens; per-request active-user check (≤ 60 s cache) | MISSING | `UserAdminService.cs:52-53` lockout only; an issued token stays valid up to 8 h | Disabled users keep access | P0 | S | S03 |
-| 12-11 | Logout revokes the token family | MISSING | Client-side sign-out only | — | P0 | S | S03 |
+| 12-07 | Access JWT 15 min, HS256 key ≥ 256 bits, `kid` header, 30 s clock skew | CONFORMS | `AuthService.AccessTokenLifetime` 15 min, HS256, `kid` derived from the key, key ≥ 32 bytes (`AppConfig`), `ClockSkew` 30 s (`Program.cs`); test `AuthTests.Login_gives_a_15_minute_token_without_personal_data_and_a_strict_refresh_cookie` (S03) | — | — | — | S03 |
+| 12-08 | Claims only `sub`, roles, `jti`, `iat`, `exp`, `iss`, `aud`; no email or name | CONFORMS | Claims are exactly `sub`, `role`, `jti`, `iat`, `exp`, `iss`, `aud` (same test); the email is added per request from the database, never put in the token (S03) | — | — | — | S03 |
+| 12-09 | Rotating refresh tokens (hashed, reuse detection, 12 h) in an HttpOnly Secure SameSite=Strict cookie; access token in memory only | CONFORMS | `RefreshTokens` table (migration `AddRefreshTokens`): 256-bit values stored as SHA-256, rotated atomically, reuse revokes the family, 12 h per sign-in; cookie HttpOnly, Secure, SameSite=Strict, Path `/api/v1/auth`; SPA keeps the access token in memory with single-flight refresh across tabs (`frontend/src/api/client.ts`); tests `AuthTests.Refresh_rotates_and_reusing_an_old_token_ends_the_session`, `client.test.ts`, Playwright `the session survives a reload…` (S03) | — | — | — | S03 |
+| 12-10 | Deactivation revokes refresh tokens; per-request active-user check (≤ 60 s cache) | CONFORMS | `UserAdminService.UpdateAsync` revokes all refresh tokens on deactivation; `ActiveUsers` per-request check (60 s cache, evicted on change) in `JwtBearerEvents.OnTokenValidated`; test `AuthTests.Deactivating_a_user_blocks_their_token_and_refresh_at_once` (S03) | — | — | — | S03 |
+| 12-11 | Logout revokes the token family | CONFORMS | `POST /api/v1/auth/logout` revokes the family and clears the cookie; tests `AuthTests.Logout_revokes_the_session`, Playwright sign-out (S03) | — | — | — | S03 |
 | 12-12 | Endpoints require named permissions; no role-name checks in business code | VIOLATES | Role-name attributes, e.g. `AlertsController.cs:20,23`, `InspectionController.cs:24` | — | P0 | M | S04 |
 | 12-13 | No endpoint is open without authentication (Appendix B grants no anonymous access) | VIOLATES | Probe §1: anonymous 200 on `/api/machines`, `/api/alerts`, `/api/observations`, `/api/reports`, `/api/workflows/executions`, `/api/overview`, report PDF | D6 | P0 | M | S04 |
 | 12-14 | Four roles: Administrator, Plant Manager, Maintenance Engineer, Inspector | PARTIAL | `Enums.cs:23-31` Viewer, Inspector, MaintenanceEngineer, Admin | D1 | P0 | M | S04 |

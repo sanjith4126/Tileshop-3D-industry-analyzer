@@ -37,7 +37,7 @@ function Detail({ machineId }: { machineId: string }) {
   const qc = useQueryClient()
   const navigate = useNavigate()
   const score = useMutation({
-    mutationFn: () => apiSend('POST', `/api/predictive/${machineId}/score`, undefined, session?.token ?? null),
+    mutationFn: () => apiSend('POST', `/api/predictive/${machineId}/score`, undefined),
     onSettled: () => qc.invalidateQueries({ queryKey: ['predictive'] }),
   })
   if (q.isPending) return <Loading label="Loading analysis…" />

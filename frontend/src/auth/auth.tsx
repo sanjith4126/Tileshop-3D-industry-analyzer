@@ -1,46 +1,34 @@
-import { createContext, useContext, useState, type ReactNode } from 'react'
-import { apiSend } from '../api/client'
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { apiSend, getSession, onSessionChange, refreshSession, setSession, type Session } from '../api/client'
 
-export interface Session {
-  token: string
-  email: string
-  displayName: string | null
-  roles: string[]
-  expiresUtc: string
-}
+export type { Session }
 
 interface AuthValue {
   session: Session | null
   login: (email: string, password: string) => Promise<void>
-  logout: () => void
+  logout: () => Promise<void>
   hasRole: (...roles: string[]) => boolean
 }
 
-const KEY = 'tiletwin.session'
 const AuthContext = createContext<AuthValue | null>(null)
 
-// Prototype: token kept in sessionStorage (cleared when the tab closes).
-function load(): Session | null {
-  try {
-    const s = JSON.parse(sessionStorage.getItem(KEY) ?? 'null') as Session | null
-    return s && new Date(s.expiresUtc) > new Date() ? s : null
-  } catch {
-    return null
-  }
-}
-
+/** Session state for the UI. The access token stays in memory (api/client); a reload restores it from the refresh cookie. */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(load)
+  const [session, setState] = useState<Session | null>(getSession)
+
+  useEffect(() => {
+    const off = onSessionChange(setState)
+    if (!getSession()) void refreshSession()
+    return off
+  }, [])
 
   const value: AuthValue = {
     session,
     login: async (email, password) => {
-      const s = await apiSend<Session>('POST', '/api/auth/login', { email, password }, null)
-      try { sessionStorage.setItem(KEY, JSON.stringify(s)) } catch { /* storage unavailable: session lasts until reload */ }
-      setSession(s)
+      setSession(await apiSend<Session>('POST', '/api/v1/auth/login', { email, password }))
     },
-    logout: () => {
-      try { sessionStorage.removeItem(KEY) } catch { /* ignore */ }
+    logout: async () => {
+      await fetch('/api/v1/auth/logout', { method: 'POST' }).catch(() => undefined) // revokes the session server-side
       setSession(null)
     },
     hasRole: (...roles) => !!session && roles.some((r) => session.roles.includes(r)),

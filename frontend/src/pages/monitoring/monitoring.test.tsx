@@ -1,5 +1,6 @@
-import { screen } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { getSession, setSession } from '../../api/client'
 import type { Alert, SensorSeries } from '../../api/types'
 import { mockApi, renderWithProviders } from '../../test-utils'
 import { AlertsList } from './AlertsList'
@@ -11,13 +12,12 @@ const alert: Alert = {
   detectedUtc: '2026-10-23T06:00:00Z', status: 'Open', resolvedUtc: null, dataOrigin: 'Synthetic', dataClassification: 'SYNTHETIC', history: [],
 }
 
-const session = (roles: string[]) =>
-  JSON.stringify({ token: 't', email: 'x@y', displayName: null, roles, expiresUtc: '2999-01-01T00:00:00Z' })
+const session = (roles: string[]) => ({ token: 't', email: 'x@y', displayName: null, roles, expiresUtc: '2999-01-01T00:00:00Z' })
 
 beforeEach(() => { mockApi({ '/api/alerts': [alert] }) })
 afterEach(() => {
   vi.unstubAllGlobals()
-  sessionStorage.clear()
+  setSession(null)
 })
 
 it('shows alert value, threshold and severity; no actions when signed out', async () => {
@@ -29,13 +29,16 @@ it('shows alert value, threshold and severity; no actions when signed out', asyn
 })
 
 it('Viewer cannot act; Inspector can acknowledge but not resolve', async () => {
-  sessionStorage.setItem('tiletwin.session', session(['Viewer']))
+  // The session is restored from the refresh cookie, exactly as after a page reload.
+  mockApi({ '/api/alerts': [alert], '/api/v1/auth/refresh': session(['Viewer']) })
   const { unmount } = renderWithProviders(<AlertsList />)
   await screen.findByText('Vibration')
+  await waitFor(() => expect(getSession()?.roles).toEqual(['Viewer']))
   expect(screen.queryByRole('button', { name: 'Acknowledge' })).not.toBeInTheDocument()
   unmount()
+  setSession(null)
 
-  sessionStorage.setItem('tiletwin.session', session(['Inspector']))
+  mockApi({ '/api/alerts': [alert], '/api/v1/auth/refresh': session(['Inspector']) })
   renderWithProviders(<AlertsList />)
   expect(await screen.findByRole('button', { name: 'Acknowledge' })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Resolve' })).not.toBeInTheDocument()

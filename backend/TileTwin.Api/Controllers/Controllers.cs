@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using TileTwin.Api.Configuration;
 using TileTwin.Api.Dtos;
@@ -86,17 +87,66 @@ public class MachinesController(MachineService machines, ReadingsService reading
         await machines.UpdateStateAsync(id, req, User.Identity?.Name, ct) ? NoContent() : NotFound();
 }
 
-[ApiController, Route("api/auth")]
-public class AuthController(AuthService auth) : ControllerBase
+/// <summary>
+/// Sign-in, token refresh and sign-out. The refresh token travels only in an HttpOnly, Secure, SameSite=Strict cookie
+/// scoped to /api/v1/auth; the access token is returned in the body and kept in memory by the SPA.
+/// </summary>
+[ApiController, Route("api/v1/auth")]
+public class AuthController(AuthService auth, LoginThrottle throttle) : ControllerBase
 {
-    [HttpPost("login"), Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("login")]
-    public async Task<IActionResult> Login(LoginRequest req, CancellationToken ct) =>
-        await auth.LoginAsync(req, ct) is { } res ? Ok(res) : Unauthorized(new { error = "Invalid email or password" });
+    public const string RefreshCookie = "tiletwin_refresh";
+    const string CookiePath = "/api/v1/auth";
+    static readonly long DeprecatedSince = new DateTimeOffset(2026, 10, 31, 0, 0, 0, TimeSpan.Zero).ToUnixTimeSeconds();
 
-    [HttpGet("me"), Authorize]
-    public IActionResult Me() => Ok(new
+    [HttpPost("login"), HttpPost("/api/auth/login"), EnableRateLimiting("login")]
+    public async Task<IActionResult> Login(LoginRequest req, CancellationToken ct)
     {
-        name = User.Identity?.Name,
-        roles = User.FindAll("role").Select(c => c.Value).ToList(),
-    });
+        if (Request.Path.StartsWithSegments("/api/auth")) Deprecated("/api/v1/auth/login");
+        if (!throttle.TryAcquire(req.Email))
+            return StatusCode(StatusCodes.Status429TooManyRequests, new { error = "Too many sign-in attempts for this account. Try again in a few minutes." });
+        return await auth.LoginAsync(req, ct) is { } s ? Session(s) : Unauthorized(new { error = "Invalid email or password" });
+    }
+
+    /// <summary>204 when there is no refresh cookie at all (nobody signed in: not an error); 401 when the cookie is refused.</summary>
+    [HttpPost("refresh"), EnableRateLimiting("refresh")]
+    public async Task<IActionResult> Refresh(CancellationToken ct)
+    {
+        if (Request.Cookies[RefreshCookie] is not { Length: > 0 } raw) return NoContent();
+        if (await auth.RefreshAsync(raw, ct) is { } s) return Session(s);
+        Response.Cookies.Delete(RefreshCookie, CookieOptions(null));
+        return Unauthorized(new { error = "Session ended — sign in again" });
+    }
+
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout(CancellationToken ct)
+    {
+        if (Request.Cookies[RefreshCookie] is { Length: > 0 } raw) await auth.LogoutAsync(raw, ct);
+        Response.Cookies.Delete(RefreshCookie, CookieOptions(null));
+        return NoContent();
+    }
+
+    [HttpGet("me"), HttpGet("/api/auth/me"), Authorize]
+    public IActionResult Me()
+    {
+        if (Request.Path.StartsWithSegments("/api/auth")) Deprecated("/api/v1/auth/me");
+        return Ok(new { name = User.Identity?.Name, roles = User.FindAll("role").Select(c => c.Value).ToList() });
+    }
+
+    OkObjectResult Session(AuthSession s)
+    {
+        Response.Cookies.Append(RefreshCookie, s.RefreshToken, CookieOptions(s.RefreshExpiresUtc));
+        return Ok(s.Response);
+    }
+
+    static CookieOptions CookieOptions(DateTime? expiresUtc) => new()
+    {
+        HttpOnly = true, Secure = true, SameSite = SameSiteMode.Strict, Path = CookiePath, IsEssential = true,
+        Expires = expiresUtc is { } e ? new DateTimeOffset(e, TimeSpan.Zero) : null,
+    };
+
+    void Deprecated(string successor)
+    {
+        Response.Headers["Deprecation"] = $"@{DeprecatedSince}";
+        Response.Headers.Link = $"<{successor}>; rel=\"successor-version\"";
+    }
 }

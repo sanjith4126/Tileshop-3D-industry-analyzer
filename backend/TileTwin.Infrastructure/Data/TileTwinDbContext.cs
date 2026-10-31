@@ -10,6 +10,23 @@ public class AppUser : IdentityUser
     public string? DisplayName { get; set; }
 }
 
+/// <summary>
+/// A refresh token, stored only as a SHA-256 hash. Tokens rotate on every use; all tokens issued from one sign-in
+/// share a FamilyId and its absolute expiry. Presenting a used or revoked token revokes the whole family.
+/// </summary>
+public class RefreshToken
+{
+    public Guid Id { get; set; }
+    public required string UserId { get; set; }
+    public Guid FamilyId { get; set; }
+    public required string TokenHash { get; set; }
+    public DateTime CreatedUtc { get; set; }
+    public DateTime ExpiresUtc { get; set; }
+    public DateTime? UsedUtc { get; set; }
+    public DateTime? RevokedUtc { get; set; }
+    public string? RevokedReason { get; set; }
+}
+
 /// <summary>Single-row table holding demo bookkeeping (which seed batch is loaded and its time anchor).</summary>
 public class DemoState
 {
@@ -46,6 +63,7 @@ public class TileTwinDbContext(DbContextOptions<TileTwinDbContext> options) : Id
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<DocumentChunk> DocumentChunks => Set<DocumentChunk>();
     public DbSet<DemoState> DemoState => Set<DemoState>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
     {
@@ -55,6 +73,16 @@ public class TileTwinDbContext(DbContextOptions<TileTwinDbContext> options) : Id
     protected override void OnModelCreating(ModelBuilder b)
     {
         base.OnModelCreating(b);
+
+        b.Entity<RefreshToken>(e =>
+        {
+            e.HasOne<AppUser>().WithMany().HasForeignKey(t => t.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.Property(t => t.TokenHash).HasMaxLength(64);
+            e.Property(t => t.RevokedReason).HasMaxLength(64);
+            e.HasIndex(t => t.TokenHash).IsUnique();
+            e.HasIndex(t => t.FamilyId);
+            e.HasIndex(t => t.UserId);
+        });
 
         b.Entity<Zone>().HasOne<Site>().WithMany(s => s.Zones).HasForeignKey(z => z.SiteId);
         b.Entity<Machine>().HasOne(m => m.Zone).WithMany(z => z.Machines).HasForeignKey(m => m.ZoneId);

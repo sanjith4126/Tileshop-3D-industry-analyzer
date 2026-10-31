@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CircleAlert, CircleCheck, FlaskConical, History, ImageUp, ScanSearch, Upload } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { ApiError, apiGet } from '../../api/client'
+import { apiGet, apiUpload } from '../../api/client'
 import { useAuth } from '../../auth/auth'
 import { EmptyState, ErrorState, Loading, Page, PageHeader, Panel } from '../../components/States'
 import { formatUtc } from '../../lib/status'
@@ -43,7 +43,7 @@ function Outcome({ r }: { r: TileResult }) {
 }
 
 export default function TileQualityPage() {
-  const { session, hasRole } = useAuth()
+  const { hasRole } = useAuth()
   const qc = useQueryClient()
   const status = useQuery({ queryKey: ['tile-status'], queryFn: ({ signal }) => apiGet<TileStatus>('/api/tile-inspections/status', signal) })
   const history = useQuery({ queryKey: ['tile-history'], queryFn: ({ signal }) => apiGet<TileResult[]>('/api/tile-inspections', signal) })
@@ -61,12 +61,7 @@ export default function TileQualityPage() {
     mutationFn: async (f: File) => {
       const form = new FormData()
       form.append('file', f)
-      const res = await fetch('/api/tile-inspections', { method: 'POST', body: form, headers: { Authorization: `Bearer ${session?.token}` } })
-      if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { errors?: Record<string, string[]> } | null
-        throw new ApiError(res.status, res.status === 403 ? 'Your role cannot upload' : body?.errors?.file?.[0] ?? `Upload failed (${res.status})`)
-      }
-      return (await res.json()) as TileResult
+      return apiUpload<TileResult>('/api/tile-inspections', form)
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tile-history'] }),
   })

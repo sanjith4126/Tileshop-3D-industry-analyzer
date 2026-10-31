@@ -17,13 +17,14 @@ const summary: InspectionSummary = {
 it('generates the summary on request and offers Show in 3D for cited entities', async () => {
   const fetch = mockApi({ '/api/inspection/summary': summary })
   renderWithProviders(<SummaryPanel zoneId="ZONE-GLAZE-A" zoneName="Glazing & Inspection" />)
-  expect(fetch).not.toHaveBeenCalled()
+  const summaryCalls = () => fetch.mock.calls.filter((c) => c[0] === '/api/inspection/summary')
+  expect(summaryCalls()).toHaveLength(0)
 
   fireEvent.click(screen.getByRole('button', { name: /Generate inspection summary/ }))
 
   expect(await screen.findByText(/OBS-ABC123/)).toBeInTheDocument()
   expect(screen.getByText('SYNTHETIC DEMO DATA')).toBeInTheDocument()
-  expect(JSON.parse(fetch.mock.calls[0][1]!.body as string)).toEqual({ zoneId: 'ZONE-GLAZE-A' })
+  expect(JSON.parse(summaryCalls()[0][1]!.body as string)).toEqual({ zoneId: 'ZONE-GLAZE-A' })
   fireEvent.click(screen.getByRole('button', { name: 'Show ZONE-GLAZE-A in 3D' }))
   expect(getFocus().entityId).toBe('ZONE-GLAZE-A')
 })

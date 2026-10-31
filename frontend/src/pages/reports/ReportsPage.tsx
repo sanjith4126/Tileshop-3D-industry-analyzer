@@ -39,7 +39,7 @@ export default function ReportsPage() {
       return apiSend<Report>('POST', '/api/reports', {
         type, fromUtc: from.toISOString(), toUtc: to.toISOString(),
         machineId: filter === 'machine' && machineId ? machineId : null, zoneId: filter === 'zone' && zoneId ? zoneId : null,
-      }, session?.token ?? null)
+      })
     },
     onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ['reports'] })

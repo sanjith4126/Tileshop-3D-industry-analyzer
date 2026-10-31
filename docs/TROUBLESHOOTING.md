@@ -18,6 +18,8 @@
 | Assistant: **AI NOT CONFIGURED** | No AI key set | Set `GROQ_API_KEY` + `LLM__Provider=groq`, or `ANTHROPIC_API_KEY` + `LLM__Model`, in `.env`; restart the API |
 | Assistant returns 502 | Invalid key, unknown model ID, provider rate limit or network problem | Check the API log ("LLM call failed"); verify the key and `LLM__Model` (Groq models: `GET https://api.groq.com/openai/v1/models`) |
 | HTTP 429 | Rate limit reached | Wait a minute |
+| Signed out after every reload | The app was opened over plain HTTP on an address other than `localhost`; the refresh cookie is `Secure` | Use `http://localhost:5180` or HTTPS |
+| "Too many sign-in attempts for this account" | More than 10 attempts for one account within 5 minutes | Wait 5 minutes |
 | Cannot sign in as dev users | Not Development, or `DEV_SEED_USER_PASSWORD` empty | Set it in `.env` and restart the API (dev users are re-synced to that password at start) |
 | Backend tests fail to connect | The compose Postgres is not running | Start it; tests create and use `tiletwin_test` |
 | Want a clean demo state | — | Administration → **Reset demo data** (Admin). User-created rows are kept |

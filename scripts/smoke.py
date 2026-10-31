@@ -60,7 +60,7 @@ def check(ok: bool, label: str) -> None:
 
 
 def login(role: str) -> str | None:
-    s, b = j("POST", "/api/auth/login", {"email": f"dev.{role.lower()}@tiletwin.local", "password": env("DEV_SEED_USER_PASSWORD")})
+    s, b = j("POST", "/api/v1/auth/login", {"email": f"dev.{role.lower()}@tiletwin.local", "password": env("DEV_SEED_USER_PASSWORD")})
     return b.get("token") if s == 200 else None
 
 

@@ -64,7 +64,12 @@ Concept demo for a **fictional** tile plant. Everything runs locally; only Postg
 
 ## Security (prototype — no security audit)
 
-JWT (8 h) with Identity lockout; role checks on every write endpoint; input validation (DataAnnotations
+Sessions: 15-minute access JWTs (claims `sub`, roles, `jti`, `iat`, `exp`, `iss`, `aud`; `kid` header; 30 s clock
+skew) kept in memory by the SPA, plus rotating refresh tokens (256-bit, stored as SHA-256 hashes, 12 h per sign-in,
+reuse revokes the whole family) in an HttpOnly, Secure, SameSite=Strict cookie scoped to `/api/v1/auth`. Every request
+re-checks that the user is active (cached ≤ 60 s; deactivation revokes tokens and takes effect at once). Lockout
+after 5 failures for 15 min; login limited per IP and per account; common passwords rejected. Role checks on every
+write endpoint; input validation (DataAnnotations
 + tool-argument validation); uploads checked by content (magic bytes / strict UTF-8), 10 MB limit,
 sanitised names, stored under generated names; rate limits (login 10/min, assistant 10/min, ML score
 20/min, uploads 10/min); request timeouts (30 s, 150 s for LLM/workflow/report/reset); no default admin

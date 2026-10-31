@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { FileText, Files, FileUp, RefreshCw, Search, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { ApiError, apiGet, apiSend } from '../../api/client'
+import { apiGet, apiSend, apiUpload } from '../../api/client'
 import { useAuth } from '../../auth/auth'
 import { DemoBadge, EmptyState, ErrorState, Loading, Page, PageHeader, Panel } from '../../components/States'
 import { formatUtc } from '../../lib/status'
@@ -15,7 +15,7 @@ function Snippet({ text }: { text: string }) {
 }
 
 export default function KnowledgePage() {
-  const { session, hasRole } = useAuth()
+  const { hasRole } = useAuth()
   const qc = useQueryClient()
   const docs = useQuery({ queryKey: ['documents'], queryFn: ({ signal }) => apiGet<{ searchMode: string; documents: Doc[] }>('/api/documents', signal) })
   const [q, setQ] = useState('')
@@ -35,18 +35,13 @@ export default function KnowledgePage() {
       const form = new FormData()
       form.append('file', file!)
       if (title.trim()) form.append('title', title.trim())
-      const res = await fetch('/api/documents', { method: 'POST', body: form, headers: { Authorization: `Bearer ${session?.token}` } })
-      if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { errors?: Record<string, string[]> } | null
-        throw new ApiError(res.status, res.status === 403 ? 'Your role cannot upload' : body?.errors?.file?.[0] ?? `Upload failed (${res.status})`)
-      }
-      return (await res.json()) as Doc
+      return apiUpload<Doc>('/api/documents', form)
     },
     onSuccess: () => { setFile(null); setTitle(''); refresh() },
   })
   const action = useMutation({
     mutationFn: ({ id, kind }: { id: string; kind: 'reindex' | 'delete' }) =>
-      kind === 'delete' ? apiSend('DELETE', `/api/documents/${id}`, undefined, session?.token ?? null) : apiSend('POST', `/api/documents/${id}/reindex`, undefined, session?.token ?? null),
+      kind === 'delete' ? apiSend('DELETE', `/api/documents/${id}`, undefined) : apiSend('POST', `/api/documents/${id}/reindex`, undefined),
     onSuccess: refresh,
   })
 

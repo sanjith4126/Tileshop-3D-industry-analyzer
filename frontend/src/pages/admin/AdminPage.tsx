@@ -11,16 +11,16 @@ const ROLES = ['Viewer', 'Inspector', 'MaintenanceEngineer', 'Admin']
 interface User { id: string; email: string; displayName: string | null; roles: string[]; disabled: boolean }
 interface AuditEntry { id: string; timestampUtc: string; userName: string | null; action: string; entityId: string | null; detailsJson: string | null }
 
-function Users({ token, self }: { token: string; self: string }) {
+function Users({ self }: { self: string }) {
   const qc = useQueryClient()
-  const users = useQuery({ queryKey: ['admin-users'], queryFn: () => fetchAuth<User[]>('/api/admin/users', token) })
+  const users = useQuery({ queryKey: ['admin-users'], queryFn: () => apiGet<User[]>('/api/admin/users') })
   const [form, setForm] = useState({ email: '', displayName: '', role: 'Viewer', password: '' })
   const create = useMutation({
-    mutationFn: () => apiSend<User>('POST', '/api/admin/users', form, token),
+    mutationFn: () => apiSend<User>('POST', '/api/admin/users', form),
     onSuccess: () => { setForm({ email: '', displayName: '', role: 'Viewer', password: '' }); qc.invalidateQueries({ queryKey: ['admin-users'] }) },
   })
   const update = useMutation({
-    mutationFn: (u: { id: string; role: string; disabled: boolean }) => apiSend<User>('PUT', `/api/admin/users/${u.id}`, { role: u.role, disabled: u.disabled }, token),
+    mutationFn: (u: { id: string; role: string; disabled: boolean }) => apiSend<User>('PUT', `/api/admin/users/${u.id}`, { role: u.role, disabled: u.disabled }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-users'] }),
   })
   return (
@@ -66,24 +66,18 @@ function Users({ token, self }: { token: string; self: string }) {
   )
 }
 
-async function fetchAuth<T>(path: string, token: string): Promise<T> {
-  const res = await fetch(path, { headers: { Authorization: `Bearer ${token}` } })
-  if (!res.ok) throw new Error(res.status === 403 ? 'Admin role required' : `Request failed (${res.status})`)
-  return (await res.json()) as T
-}
-
 export default function AdminPage() {
   const { session, hasRole } = useAuth()
   const qc = useQueryClient()
   const overview = useOverview()
   const sim = useQuery({ queryKey: ['simulator'], queryFn: ({ signal }) => apiGet<{ paused: boolean; anchorUtc: string | null; lastReadingUtc: string | null }>('/api/admin/simulator', signal), refetchInterval: 7000 })
-  const audit = useQuery({ queryKey: ['audit'], queryFn: () => fetchAuth<AuditEntry[]>('/api/admin/audit?limit=50', session!.token), enabled: hasRole('Admin') })
+  const audit = useQuery({ queryKey: ['audit'], queryFn: () => apiGet<AuditEntry[]>('/api/admin/audit?limit=50'), enabled: hasRole('Admin') })
   const toggle = useMutation({
-    mutationFn: (paused: boolean) => apiSend('PUT', '/api/admin/simulator', { paused }, session?.token ?? null),
+    mutationFn: (paused: boolean) => apiSend('PUT', '/api/admin/simulator', { paused }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['simulator'] }); qc.invalidateQueries({ queryKey: ['overview'] }) },
   })
   const reset = useMutation({
-    mutationFn: () => apiSend<{ anchorUtc: string }>('POST', '/api/admin/reset-demo', undefined, session?.token ?? null),
+    mutationFn: () => apiSend<{ anchorUtc: string }>('POST', '/api/admin/reset-demo', undefined),
     onSuccess: () => qc.invalidateQueries(),
   })
 
@@ -127,7 +121,7 @@ export default function AdminPage() {
           </div>
         </Panel>
       </div>
-      {session && hasRole('Admin') && <Users token={session.token} self={session.email} />}
+      {session && hasRole('Admin') && <Users self={session.email} />}
       {hasRole('Admin') && (
         <Panel title="Audit log · latest 50" icon={<ScrollText className="size-4" />} className="overflow-x-auto">
           {audit.isPending ? <Loading /> : audit.isError ? <ErrorState error={audit.error} /> : (

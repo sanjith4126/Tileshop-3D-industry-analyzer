@@ -26,7 +26,7 @@ export default function AssistantPage() {
 
   const send = useMutation({
     mutationFn: (history: Turn[]) => apiSend<ChatResponse>('POST', '/api/assistant/chat',
-      { messages: history.slice(-20).map(({ role, text }) => ({ role, text })) }, session?.token ?? null),
+      { messages: history.slice(-20).map(({ role, text }) => ({ role, text })) }),
     onSuccess: (r) => setTurns((t) => [...t, { role: 'assistant', text: r.answer, toolCalls: r.toolCalls, focusEntityIds: r.focusEntityIds, disclaimer: r.disclaimer }]),
   })
 

@@ -1,9 +1,11 @@
+using System.Security.Claims;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using System.Threading.RateLimiting;
 using TileTwin.Api.Assistant;
@@ -27,7 +29,10 @@ builder.Services.AddIdentityCore<AppUser>(o =>
     {
         o.Password.RequiredLength = 12;
         o.User.RequireUniqueEmail = true;
+        o.Lockout.MaxFailedAccessAttempts = 5;
+        o.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
     })
+    .AddPasswordValidator<CommonPasswordValidator>()
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<TileTwinDbContext>()
     .AddDefaultTokenProviders();
@@ -40,10 +45,27 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
         ValidIssuer = AppConfig.JwtIssuer,
         ValidAudience = AppConfig.JwtAudience,
         IssuerSigningKey = AuthService.SigningKey(config),
+        ClockSkew = TimeSpan.FromSeconds(30),
         NameClaimType = "name",
         RoleClaimType = "role",
     };
+    // The token carries no personal data. Each request checks that the user is still active (cached ≤ 60 s) and adds
+    // the email as the in-memory name claim used for audit entries.
+    o.Events = new JwtBearerEvents
+    {
+        OnTokenValidated = async ctx =>
+        {
+            var sub = ctx.Principal!.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+            var email = sub is null ? null
+                : await ctx.HttpContext.RequestServices.GetRequiredService<ActiveUsers>().EmailIfActiveAsync(sub, ctx.HttpContext.RequestAborted);
+            if (email is null) ctx.Fail("User is not active");
+            else ((ClaimsIdentity)ctx.Principal.Identity!).AddClaim(new Claim("name", email));
+        },
+    };
 });
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<ActiveUsers>();
+builder.Services.AddSingleton<LoginThrottle>();
 builder.Services.AddAuthorization();
 
 builder.Services.AddScoped<AuditLogger>();
@@ -90,7 +112,8 @@ builder.Services.AddRateLimiter(o =>
     Policy("assistant", 10);
     Policy("ml", 20);
     Policy("upload", 10);
-    Policy("login", 10); // per IP when anonymous; accounts also lock after 5 failures
+    Policy("login", 10); // per IP when anonymous; also per account (LoginThrottle) and a 5-failure lockout
+    Policy("refresh", 30);
 });
 
 // Request timeouts: 30 s by default, longer for LLM / workflow / report / reset endpoints.

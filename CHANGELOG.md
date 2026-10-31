@@ -27,9 +27,30 @@ no versioned releases yet, so changes collect under Unreleased. Slice and row ID
   window (`fromUtc`, `toUtc`). The banner, badges, chart captions and the header and footer of every PDF page say
   "SYNTHETIC DEMO DATA".
 
+### Deprecated
+
+- `POST /api/auth/login` and `GET /api/auth/me` (S03): aliases of the `/api/v1/auth/...` routes, answered with a
+  `Deprecation` header and a `Link` to the successor. They will be removed after the next release.
+
 ### Removed
 
 - The assistant's `create_report_draft` tool (S02; 2-15). The assistant only reads; it points users to the Reports
   screen instead. Its tool list is now an allowlist checked by a test.
 - `containsSyntheticData` on inspection summaries and report documents (S01), replaced by `dataClassification`.
   It was false for summaries and reports built only from user-created records, which are synthetic demo data too.
+
+### Fixed
+
+- The user menu opened underneath the page content, so **Sign out** could not be clicked on the Overview (found by
+  the new Playwright session test).
+
+### Security
+
+- **Sessions** (S03; 12-02, 12-04, 12-05, 12-07 … 12-11). Sign-in moved to `POST /api/v1/auth/login`; new
+  `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout` and `GET /api/v1/auth/me`. Access tokens last 15 minutes
+  (was 8 h) and carry only `sub`, roles, `jti`, `iat`, `exp`, `iss` and `aud` — no email or name — with a `kid`
+  header and 30 s clock skew. A rotating refresh token (12 h per sign-in; reuse ends the whole session) travels in
+  an HttpOnly, Secure, SameSite=Strict cookie. The SPA keeps the access token in memory only (was sessionStorage)
+  and restores the session after a reload from the cookie. Sign-out and user deactivation revoke the session on
+  the server at once. Lockout lasts 15 minutes (was 5); sign-in is also limited to 10 attempts per account per
+  5 minutes; common passwords are rejected.

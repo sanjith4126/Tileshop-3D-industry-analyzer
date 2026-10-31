@@ -14,7 +14,6 @@ import { PriorityBadge } from './InspectionPage'
 const ROLES = ['', 'Inspector', 'MaintenanceEngineer', 'Admin', 'Viewer']
 
 function UpdateForm({ o }: { o: ObservationSummary }) {
-  const { session } = useAuth()
   const qc = useQueryClient()
   const [status, setStatus] = useState(o.status)
   const [role, setRole] = useState(o.assignedRole ?? '')
@@ -22,7 +21,7 @@ function UpdateForm({ o }: { o: ObservationSummary }) {
   const [comment, setComment] = useState('')
   const save = useMutation({
     mutationFn: () => apiSend<ObservationDetail>('PATCH', `/api/observations/${o.id}`,
-      { status, assignedRole: role, assignedUser: user, comment: comment || null }, session?.token ?? null),
+      { status, assignedRole: role, assignedUser: user, comment: comment || null }),
     onSuccess: (d) => {
       setComment('')
       qc.setQueryData(['observation', o.id], d)

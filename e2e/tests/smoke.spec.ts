@@ -52,6 +52,22 @@ test.describe('smoke: existing screens', () => {
     expect(errors).toEqual([])
   })
 
+  test('the session survives a reload without any token in browser storage, and sign-out ends it', async ({ page, context }) => {
+    await signIn(page)
+    await page.reload()
+    await expect(page.getByText(adminEmail).first()).toBeVisible()              // restored from the refresh cookie
+    const stored = await page.evaluate(() => JSON.stringify({ ...localStorage, ...sessionStorage }))
+    expect(stored).not.toMatch(/eyJ[\w-]+\.[\w-]+\./)                                // no JWT in browser storage
+    const cookie = (await context.cookies()).find((c) => c.name === 'tiletwin_refresh')
+    expect(cookie).toMatchObject({ httpOnly: true, secure: true, sameSite: 'Strict', path: '/api/v1/auth' })
+
+    await page.getByText(adminEmail).first().click()
+    await page.getByRole('menuitem', { name: /Sign out/ }).click()
+    await expect(page.getByRole('button', { name: 'Sign in' }).first()).toBeVisible()  // server revoked the session
+    await page.reload()
+    await expect(page.getByRole('button', { name: 'Sign in' }).first()).toBeVisible()
+  })
+
   test('unknown address shows the not-found page', async ({ page }) => {
     await page.goto('/no-such-page')
     await expect(page.getByRole('heading', { name: /not found/i })).toBeVisible()
