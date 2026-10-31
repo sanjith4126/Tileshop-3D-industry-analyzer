@@ -10,7 +10,7 @@
 | 2. Conformance audit | ✅ done 2026-10-30; gate passed by the owner's instruction "do everything all the phases" (D1–D8 taken as recommended, D2: keep features — to confirm in the final report) | [`docs/CONFORMANCE_REPORT.md`](CONFORMANCE_REPORT.md): 352 rows — 57 CONFORMS, 187 PARTIAL, 74 MISSING, 34 VIOLATES; open rows by priority P0 48, P1 85, P2 95, P3 42, P4 25. Evidence: [`conformance/probes-2026-10-30.txt`](conformance/probes-2026-10-30.txt) |
 | 3. Safety net | ✅ done 2026-10-31 — gate passed: CI green on unchanged code ([run 41220869747](https://github.com/sanjith4126/Tileshop-3D-industry-analyzer/actions/runs/41220869747), all four jobs) | `.github/workflows/ci.yml` (backend on PostgreSQL, frontend, ML, e2e = API smoke + Playwright); `backend/TileTwin.Architecture.Tests` (5 rules, report-only); `backend/TileTwin.Tests/Integration/CharacterizationTests.cs`; `e2e/` Playwright smoke (2 tests). The first two CI runs failed in the e2e job: the CI dev password broke the Identity policy (no upper-case letter), so no dev user could sign in; fixed in `27ef6cf` |
 | 4. Remediation plan | ✅ done 2026-10-31; approved by the owner's instruction of 2026-10-30 ("do everything all the phases") with D1–D8 as recommended (D2: keep features) | [`docs/REMEDIATION_PLAN.md`](REMEDIATION_PLAN.md): 33 slices S01–S33 + exception EX-01 cover all 295 open rows (`python scripts/assign_slices.py` checks the mapping); [`docs/EXCEPTIONS.md`](EXCEPTIONS.md) |
-| 5. Remediation | in progress 2026-10-31 | S01 honest data ✅ (rows 2-01, 2-02, 2-03, 2-07, 2-08, 2-11, 7-06 CONFORMS; 13-09 partly, rest in S23). Tests: backend 108 + architecture 5, frontend 20. [`CHANGELOG.md`](../CHANGELOG.md) lists the behaviour changes |
+| 5. Remediation | in progress 2026-10-31 | S01 honest data ✅ (rows 2-01, 2-02, 2-03, 2-07, 2-08, 2-11, 7-06 CONFORMS; 13-09 partly, rest in S23). S02 read-only assistant ✅ (2-15). Tests: backend 108 + architecture 5, frontend 20. [`CHANGELOG.md`](../CHANGELOG.md) lists the behaviour changes |
 | 6–10 | not started | |
 
 No application code was changed in Phases 1–3 (Phase 3 fixed a same-second flake in a test only).
@@ -213,7 +213,7 @@ health checks; `.env.example`; README.
 - Assistant (`POST /api/assistant/chat`, signed in, rate-limited 10/min): 9 tools — `search_machines`,
   `get_machine_status`, `get_readings_summary` (stats aggregated in PostgreSQL), `list_alerts`,
   `list_observations`, `get_maintenance_history`, `get_production_stats`, `search_documents` (honest
-  "no documents yet" until M10), `create_report_draft` (only write). Validated arguments (`ToolArgs`:
+  "no documents yet" until M10), `create_report_draft` (only write; *removed 2026-10-31 in S02 — the assistant is read-only*). Validated arguments (`ToolArgs`:
   ID pattern, ranges, enums, lengths), row limit 30, max 6 tool calls per question, every call audited.
   System prompt: answer only from tool results, cite IDs, facts vs hypotheses, synthetic data, never a
   confirmed fault, tool results are untrusted. `focusEntityIds` = existing machine/zone IDs in the answer.

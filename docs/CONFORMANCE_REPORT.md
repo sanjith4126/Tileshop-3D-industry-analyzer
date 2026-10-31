@@ -22,22 +22,22 @@ Effort: S < ½ day, M ≤ 2 days, L more. **Slice** is assigned in Phase 4 (reme
 
 | Status | Rows | Share |
 |---|---:|---:|
-| CONFORMS | 64 | 18 % |
+| CONFORMS | 65 | 18 % |
 | PARTIAL | 185 | 53 % |
 | MISSING | 73 | 21 % |
-| VIOLATES | 30 | 9 % |
+| VIOLATES | 29 | 8 % |
 | NOT_APPLICABLE | 0 | 0 % |
 
 Open rows (everything not CONFORMS) by priority:
 
 | Priority | Meaning | PARTIAL | MISSING | VIOLATES | Total |
 |---|---|---:|---:|---:|---:|
-| P0 | data honesty, security, licences | 17 | 10 | 14 | 41 |
+| P0 | data honesty, security, licences | 17 | 10 | 13 | 40 |
 | P1 | policy correctness, data integrity, backend authority | 47 | 30 | 8 | 85 |
 | P2 | architecture, API, observability, performance, degraded modes | 68 | 22 | 5 | 95 |
 | P3 | design system, accessibility, UX, 3D twin | 38 | 1 | 3 | 42 |
 | P4 | documentation, ADRs, demo script | 15 | 10 | 0 | 25 |
-| **All** | | 185 | 73 | 30 | **288** |
+| **All** | | 185 | 73 | 29 | **287** |
 <!-- SUMMARY:END -->
 
 Counts at the baseline and now are identical, because Phase 2 changes no application code. Regenerate this block
@@ -94,7 +94,7 @@ destructive migrations, changing how the demo is accessed). The plan cannot be f
 | 2-12 | Unavailable dependencies show an explicit unavailable / not-configured state with the reason | CONFORMS | `AssistantController.cs:21` (503 AI NOT CONFIGURED), `MlClient.cs:25-42` (no score when ML is down), tile MODEL NOT CONFIGURED; tests `On_demand_score_requires_sign_in_and_reports_unavailable_honestly`, `Without_a_key_the_assistant_reports_not_configured_and_gives_no_answer` | — | — | — | — |
 | 2-13 | Anomaly scores are worded as statistical deviation, never failure probability | CONFORMS | `PredictiveService.cs:16-17`, `ReportBuilder.cs:95`, `AssistantService.cs:27`; UI text asserted in `predictive.test.tsx` | — | — | — | — |
 | 2-14 | The application works fully when the AI provider is absent, misconfigured or failing | CONFORMS | Test host blanks AI keys and all 85 tests pass; `AssistantController.cs:21-41`; workflow falls back to deterministic text (`AssistantWorkflowTests`) | — | — | — | — |
-| 2-15 | The assistant only calls read-only tools and never writes | VIOLATES | `backend/TileTwin.Api/Assistant/AssistantTools.cs:44,62` `create_report_draft` inserts a Report | One write tool | P0 | S | S02 |
+| 2-15 | The assistant only calls read-only tools and never writes | CONFORMS | `backend/TileTwin.Api/Assistant/AssistantTools.cs`: eight read-only tools, `create_report_draft` removed; the system prompt says it can only read and names the Reports screen; test `AssistantWorkflowTests.Assistant_has_only_read_only_tools_and_cannot_create_records` (tool allowlist; a scripted call to the old tool is rejected and no report is created) (S02) | — | — | — | S02 |
 | 2-16 | The assistant never executes model-generated SQL | CONFORMS | Tools are fixed C# queries with validated arguments (`AssistantTools.cs`, `ToolArgs.cs`); test `Invalid_argument_json_is_returned_as_an_error_not_executed` | — | — | — | — |
 | 2-17 | Assistant tools run under the requesting user's permissions | MISSING | `AssistantTools.ExecuteAsync` receives the user name only for auditing; no scope exists | No data scoping | P0 | M | S05 |
 | 2-18 | No regulatory compliance or certification claims | CONFORMS | `git grep -i -E "ISO ?27001\|IEC ?62443\|SOC ?2\|certified"` in README and docs (excluding the prompt) → 0 lines | — | — | — | — |

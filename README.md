@@ -119,7 +119,7 @@ synthetic demo rows in one transaction and re-seeds; user-created rows are kept.
 
 - **AI assistant**: set `GROQ_API_KEY` with `LLM__Provider=groq` (Groq, default model
   `openai/gpt-oss-120b`) or `ANTHROPIC_API_KEY` + `LLM__Model` (Claude), restart the API. Server-side
-  only, read-only tools (plus report drafts), ≤ 6 tool calls per question, every call audited,
+  only, read-only tools (it cannot create or change records), ≤ 6 tool calls per question, every call audited,
   rate-limited. The same provider rewords the maintenance-prioritisation recommendation.
 - **ML service**: models train on synthetic data at first start. `python -m app.train` retrains,
   `python -m app.evaluate` regenerates [docs/ML-EVALUATION.md](docs/ML-EVALUATION.md). If the service is

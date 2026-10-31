@@ -29,5 +29,7 @@ no versioned releases yet, so changes collect under Unreleased. Slice and row ID
 
 ### Removed
 
+- The assistant's `create_report_draft` tool (S02; 2-15). The assistant only reads; it points users to the Reports
+  screen instead. Its tool list is now an allowlist checked by a test.
 - `containsSyntheticData` on inspection summaries and report documents (S01), replaced by `dataClassification`.
   It was false for summaries and reports built only from user-created records, which are synthetic demo data too.

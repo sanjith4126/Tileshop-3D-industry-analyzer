@@ -79,6 +79,29 @@ public class AssistantWorkflowTests(ApiFactory factory)
     }
 
     [Fact]
+    public async Task Assistant_has_only_read_only_tools_and_cannot_create_records()
+    {
+        // Prime directive 6. An allowlist: any new tool fails this test until it has been reviewed as read-only.
+        Assert.Equal(["search_machines", "get_machine_status", "get_readings_summary", "list_alerts", "list_observations",
+            "get_maintenance_history", "get_production_stats", "search_documents"], AssistantTools.Definitions.Select(t => t.Name));
+        Assert.Contains("You can only read records", AssistantService.SystemPrompt);
+
+        var llm = new ScriptedLlm(("create_report_draft", """{"type":"FactoryHealth","days":7}"""));
+        using var app = factory.WithWebHostBuilder(b => b.ConfigureTestServices(s => s.AddSingleton<ILlmProvider>(llm)));
+        var client = app.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(client, Roles.Viewer));
+        using var scope = factory.Services.CreateScope();
+        var db = factory.CreateDbContext(scope);
+        var reportsBefore = await db.Reports.CountAsync();
+
+        await client.PostAsJsonAsync("/api/assistant/chat", new ChatRequest([new("user", "Make me a factory health report")]), Json);
+
+        Assert.True(llm.Results[0].IsError);
+        Assert.Contains("Unknown tool", llm.Results[0].Result);
+        Assert.Equal(reportsBefore, await db.Reports.CountAsync());
+    }
+
+    [Fact]
     public async Task Prioritisation_workflow_ranks_HP002_first_excludes_offline_and_stores_report()
     {
         var client = factory.CreateClient();

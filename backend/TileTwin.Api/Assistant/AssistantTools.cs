@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using TileTwin.Api.Reports;
 using TileTwin.Api.Services;
 using TileTwin.Domain;
 using TileTwin.Domain.Entities;
@@ -12,11 +11,11 @@ using TileTwin.Infrastructure.Llm;
 namespace TileTwin.Api.Assistant;
 
 /// <summary>
-/// The assistant's tools: read-only (plus report drafts), validated arguments, row limits.
+/// The assistant's tools: read-only, validated arguments, row limits (prime directive 6: the assistant never writes).
 /// No SQL generation, no shell. Results are JSON data the model must treat as untrusted.
 /// </summary>
 public class AssistantTools(TileTwinDbContext db, MachineService machines, AlertService alerts, InspectionService inspections,
-    ReportService reports, KnowledgeService knowledge, TimeProvider clock)
+    KnowledgeService knowledge, TimeProvider clock)
 {
     public const int MaxRows = 30;
     static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() } };
@@ -42,12 +41,9 @@ public class AssistantTools(TileTwinDbContext db, MachineService machines, Alert
             ToolArgs.Schema(("days", "integer", "Window in days, 1-30", false, null))),
         new("search_documents", "Search the Knowledge Centre documents (manuals, procedures).",
             ToolArgs.Schema(("query", "string", "Search text", false, null))),
-        new("create_report_draft", "Create a DRAFT report from database records (the only write action). Returns the report ID and link.",
-            ToolArgs.Schema(("type", "string", "Report type", false, Enum.GetNames<ReportType>().Where(t => t != nameof(ReportType.MaintenancePrioritisation)).ToArray()),
-                ("days", "integer", "Period in days ending now, 1-90", false, null), ("machineId", "string", "Machine filter", true, null), ("zoneId", "string", "Zone filter", true, null))),
     ];
 
-    public async Task<object> ExecuteAsync(string name, ToolArgs a, string user, CancellationToken ct) => name switch
+    public async Task<object> ExecuteAsync(string name, ToolArgs a, CancellationToken ct) => name switch
     {
         "search_machines" => await SearchMachines(a.OptString("query"), a.OptEnum<MachineStatus>("status"), a.OptId("zoneId"), ct),
         "get_machine_status" => await machines.GetAsync(a.Id("machineId"), ct) is { } d
@@ -60,7 +56,6 @@ public class AssistantTools(TileTwinDbContext db, MachineService machines, Alert
         "get_maintenance_history" => await Maintenance(a.Id("machineId"), a.Int("limit", 1, 20, 10), ct),
         "get_production_stats" => await Production(a.Int("days", 1, 30, 7), ct),
         "search_documents" => await SearchDocuments(a.OptString("query", 200) ?? throw new ToolArgumentException("query is required"), ct),
-        "create_report_draft" => await ReportDraft(a, user, ct),
         _ => throw new ToolArgumentException($"Unknown tool {name}"),
     };
 
@@ -140,14 +135,5 @@ public class AssistantTools(TileTwinDbContext db, MachineService machines, Alert
             days, batches = b.Count, unitsProduced = b.Sum(x => x.UnitsProduced), unitsRejected = b.Sum(x => x.UnitsRejected), rejectRatePercent = Rate(b),
             byPress = b.GroupBy(x => x.PressMachineId).OrderBy(g => g.Key).Select(g => new { pressMachineId = g.Key, batches = g.Count(), rejectRatePercent = Rate(g) }),
         };
-    }
-
-    async Task<object> ReportDraft(ToolArgs a, string user, CancellationToken ct)
-    {
-        var type = a.OptEnum<ReportType>("type") ?? throw new ToolArgumentException("type is required");
-        if (type == ReportType.MaintenancePrioritisation) throw new ToolArgumentException("Use the maintenance-prioritisation workflow for that report");
-        var now = clock.GetUtcNow().UtcDateTime;
-        var r = await reports.CreateAsync(new ReportRequest(type, now.AddDays(-a.Int("days", 1, 90, 7)), now, a.OptId("machineId"), a.OptId("zoneId"), ReportStatus.Draft), user, ct);
-        return new { reportId = r.Id, status = "Draft", title = r.Document.Title, url = $"/reports/{r.Id}", summary = r.Document.Summary };
     }
 }
