@@ -30,7 +30,7 @@ public class AdminTests(ApiFactory factory)
     [Fact]
     public async Task Admin_creates_user_who_can_sign_in_then_disables_them()
     {
-        var admin = await As(Roles.Admin);
+        var admin = await As(Roles.Administrator);
         var email = $"new.{Guid.NewGuid():N}@tiletwin.local";
         const string pw = "Correct-Horse-Battery-9";
 
@@ -43,20 +43,20 @@ public class AdminTests(ApiFactory factory)
         var login = new LoginRequest(email, pw);
         Assert.Equal(HttpStatusCode.OK, (await factory.CreateClient().PostAsJsonAsync("/api/auth/login", login, Json)).StatusCode);
 
-        var updated = (await (await admin.PutAsJsonAsync($"/api/admin/users/{user.Id}", new UpdateUserRequest(Roles.Viewer, true), Json))
+        var updated = (await (await admin.PutAsJsonAsync($"/api/admin/users/{user.Id}", new UpdateUserRequest(Roles.PlantManager, true), Json))
             .Content.ReadFromJsonAsync<UserDto>(Json))!;
         Assert.True(updated.Disabled);
         Assert.Equal(HttpStatusCode.Unauthorized, (await factory.CreateClient().PostAsJsonAsync("/api/auth/login", login, Json)).StatusCode);
 
         var users = await admin.GetFromJsonAsync<List<UserDto>>("/api/admin/users", Json);
-        var self = users!.Single(u => u.Email == "dev.admin@tiletwin.local");
-        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync($"/api/admin/users/{self.Id}", new UpdateUserRequest(Roles.Admin, true), Json)).StatusCode);
+        var self = users!.Single(u => u.Email == "dev.administrator@tiletwin.local");
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync($"/api/admin/users/{self.Id}", new UpdateUserRequest(Roles.Administrator, true), Json)).StatusCode);
     }
 
     [Fact]
     public async Task Overview_and_audit_and_reset()
     {
-        var admin = await As(Roles.Admin);
+        var admin = await As(Roles.Administrator);
         var overview = await admin.GetFromJsonAsync<JsonElement>("/api/overview");
         Assert.Equal(1, overview.GetProperty("statusCounts").GetProperty("Critical").GetInt32());
         Assert.True(overview.GetProperty("openAlerts").GetProperty("critical").GetInt32() >= 1);

@@ -43,11 +43,35 @@ public class AssistantTools(TileTwinDbContext db, MachineService machines, Alert
             ToolArgs.Schema(("query", "string", "Search text", false, null))),
     ];
 
-    public async Task<object> ExecuteAsync(string name, ToolArgs a, CancellationToken ct) => name switch
+    /// <summary>The permission each tool needs. Tools run with the caller's permissions: the model is offered only the
+    /// tools the user may use, and every call is checked again.</summary>
+    public static readonly IReadOnlyDictionary<string, string> RequiredPermission = new Dictionary<string, string>
+    {
+        ["search_machines"] = Permissions.PlantView,
+        ["get_machine_status"] = Permissions.MachinesView,
+        ["get_readings_summary"] = Permissions.MachinesView,
+        ["list_alerts"] = Permissions.AlertsView,
+        ["list_observations"] = Permissions.InspectionsView,
+        ["get_maintenance_history"] = Permissions.MaintenanceView,
+        ["get_production_stats"] = Permissions.PlantView,
+        ["search_documents"] = Permissions.KnowledgeView,
+    };
+
+    public static IReadOnlyList<LlmTool> For(IReadOnlySet<string> permissions) =>
+        Definitions.Where(t => permissions.Contains(RequiredPermission[t.Name])).ToList();
+
+    public async Task<object> ExecuteAsync(string name, ToolArgs a, IReadOnlySet<string> permissions, CancellationToken ct)
+    {
+        if (RequiredPermission.TryGetValue(name, out var needed) && !permissions.Contains(needed))
+            throw new ToolArgumentException($"{name} is not available for your role");
+        return await RunAsync(name, a, permissions, ct);
+    }
+
+    async Task<object> RunAsync(string name, ToolArgs a, IReadOnlySet<string> permissions, CancellationToken ct) => name switch
     {
         "search_machines" => await SearchMachines(a.OptString("query"), a.OptEnum<MachineStatus>("status"), a.OptId("zoneId"), ct),
-        "get_machine_status" => await machines.GetAsync(a.Id("machineId"), ct) is { } d
-            ? new { d.Machine, d.Sensors, recentMaintenance = d.RecentMaintenance.Take(3) } : NotFound("machine"),
+        "get_machine_status" => await machines.GetAsync(a.Id("machineId"), permissions.Contains(Permissions.MaintenanceView), ct) is { } d
+            ? new { d.Machine, d.Sensors, recentMaintenance = d.RecentMaintenance?.Take(3) } : NotFound("machine"),
         "get_readings_summary" => await ReadingsSummary(a.Id("machineId"), a.Int("hours", 1, 168, 24), ct),
         "list_alerts" => (await alerts.ListAsync(a.OptId("machineId"), a.OptEnum<AlertStatus>("status"), MaxRows, ct))
             .Select(x => new { x.Id, x.MachineId, x.SensorId, x.Measurement, x.Severity, x.ObservedValue, x.Unit, x.Threshold, x.DetectedUtc, x.Status, kind = "threshold alert (not a confirmed fault)" }),

@@ -16,15 +16,16 @@ public class ApiTests(ApiFactory factory)
     [Fact]
     public async Task Health_reports_database_ok()
     {
-        var body = await factory.CreateClient().GetStringAsync("/api/health");
+        var body = await factory.CreateClient().GetStringAsync("/api/health");     // anonymous by design (probes)
         Assert.Contains("\"database\":\"ok\"", body);
-        Assert.Contains("demo-v1", body);
+        Assert.DoesNotContain("127.0.0.1", body);                                   // no internal addresses or plant data
+        Assert.DoesNotContain("demo-v1", body);
     }
 
     [Fact]
     public async Task Seeded_machines_show_scripted_statuses()
     {
-        var machines = await factory.CreateClient().GetFromJsonAsync<List<MachineSummaryDto>>("/api/machines", Json);
+        var machines = await (await factory.SignedInClientAsync()).GetFromJsonAsync<List<MachineSummaryDto>>("/api/machines", Json);
 
         Assert.Equal(16, machines!.Count);
         var byId = machines.ToDictionary(m => m.Id);
@@ -39,22 +40,31 @@ public class ApiTests(ApiFactory factory)
     [Fact]
     public async Task Machine_detail_includes_sensors_limits_and_maintenance()
     {
-        var d = await factory.CreateClient().GetFromJsonAsync<MachineDetailDto>("/api/machines/MACHINE-HP-002", Json);
+        var d = await (await factory.SignedInClientAsync()).GetFromJsonAsync<MachineDetailDto>("/api/machines/MACHINE-HP-002", Json);
 
         Assert.Equal("Unknown (demo)", d!.Machine.Manufacturer);
         var vib = Assert.Single(d.Sensors, s => s.Id == "SENSOR-HP-002-VIB");
         Assert.Equal("Critical", vib.State);
         Assert.Equal(7.1, vib.CriticalMax);
-        Assert.NotEmpty(d.RecentMaintenance);
+        Assert.NotEmpty(d.RecentMaintenance!);
+    }
+
+    [Fact]
+    public async Task Inspectors_see_machine_detail_without_maintenance_records()
+    {
+        // Appendix B: inspectors may see machine detail but not maintenance records.
+        var d = await (await factory.SignedInClientAsync(Roles.Inspector)).GetFromJsonAsync<MachineDetailDto>("/api/machines/MACHINE-HP-002", Json);
+        Assert.NotEmpty(d!.Sensors);
+        Assert.Null(d.RecentMaintenance);
     }
 
     [Fact]
     public async Task Unknown_machine_returns_404() =>
-        Assert.Equal(HttpStatusCode.NotFound, (await factory.CreateClient().GetAsync("/api/machines/NOPE")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await (await factory.SignedInClientAsync()).GetAsync("/api/machines/NOPE")).StatusCode);
 
     [Fact]
     public async Task Zones_list_has_five_zones() =>
-        Assert.Equal(5, (await factory.CreateClient().GetFromJsonAsync<List<ZoneDto>>("/api/zones", Json))!.Count);
+        Assert.Equal(5, (await (await factory.SignedInClientAsync()).GetFromJsonAsync<List<ZoneDto>>("/api/zones", Json))!.Count);
 
     [Fact]
     public async Task Write_endpoint_enforces_roles()
@@ -65,7 +75,7 @@ public class ApiTests(ApiFactory factory)
 
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.PutAsJsonAsync(url, body, Json)).StatusCode);
 
-        client.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(client, Roles.Viewer));
+        client.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(client, Roles.PlantManager));
         Assert.Equal(HttpStatusCode.Forbidden, (await client.PutAsJsonAsync(url, body, Json)).StatusCode);
 
         client.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(client, Roles.MaintenanceEngineer));

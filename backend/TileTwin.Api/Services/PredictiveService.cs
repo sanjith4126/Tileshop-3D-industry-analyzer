@@ -36,7 +36,7 @@ public class PredictiveService(TileTwinDbContext db, MachineService machines, Re
 
     public async Task<PredictiveDto?> GetAsync(string machineId, CancellationToken ct)
     {
-        var detail = await machines.GetAsync(machineId, ct);
+        var detail = await machines.GetAsync(machineId, includeMaintenance: true, ct);
         if (detail is null) return null;
         var now = clock.GetUtcNow().UtcDateTime;
         var m = detail.Machine;

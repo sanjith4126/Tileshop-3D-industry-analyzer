@@ -14,7 +14,7 @@ public class PredictiveTests(ApiFactory factory)
     [Fact]
     public async Task Predictive_view_for_HP002_has_patterns_rules_and_review_label_without_ML()
     {
-        var d = await factory.CreateClient().GetFromJsonAsync<PredictiveDto>("/api/predictive/MACHINE-HP-002", Json);
+        var d = await (await factory.SignedInClientAsync()).GetFromJsonAsync<PredictiveDto>("/api/predictive/MACHINE-HP-002", Json);
 
         Assert.Equal(PredictiveService.ReviewLabel, d!.ReviewLabel);
         Assert.StartsWith("Not implemented", d.FailurePrediction);
@@ -29,7 +29,7 @@ public class PredictiveTests(ApiFactory factory)
     [Fact]
     public async Task Pump002_gets_missing_data_rule()
     {
-        var d = await factory.CreateClient().GetFromJsonAsync<PredictiveDto>("/api/predictive/MACHINE-PUMP-002", Json);
+        var d = await (await factory.SignedInClientAsync()).GetFromJsonAsync<PredictiveDto>("/api/predictive/MACHINE-PUMP-002", Json);
         Assert.Contains(d!.SuggestedActions, s => s.RuleId == "R-DAT-01");
         Assert.Contains(d.DataQualityWarnings, w => w.StartsWith("Flow"));
     }
@@ -41,7 +41,7 @@ public class PredictiveTests(ApiFactory factory)
         const string url = "/api/predictive/MACHINE-HP-001/score";
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsync(url, null)).StatusCode);
 
-        client.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(client, Roles.Viewer));
+        client.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(client, Roles.PlantManager));
         var r = await (await client.PostAsync(url, null)).Content.ReadFromJsonAsync<ScoreResultDto>(Json);
         Assert.True(r!.MlUnavailable);
         Assert.Null(r.Score);

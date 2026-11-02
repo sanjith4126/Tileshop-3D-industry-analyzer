@@ -1,7 +1,8 @@
-import { ArrowLeft, Download } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import { useReport } from '../../api/hooks'
 import type { Report } from '../../api/types'
+import { DownloadButton } from '../../components/AuthMedia'
 import { ErrorState, Loading, Page } from '../../components/States'
 import { formatUtc } from '../../lib/status'
 
@@ -63,7 +64,7 @@ export default function ReportViewPage() {
     <Page>
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
         <Link to="/reports" className="btn btn-ghost"><ArrowLeft className="size-4" aria-hidden="true" />All reports</Link>
-        <a href={`/api/reports/${id}/pdf`} download className="btn btn-primary"><Download className="size-4" aria-hidden="true" />Download PDF</a>
+        <DownloadButton path={`/api/reports/${id}/pdf`} fileName="report.pdf" className="btn btn-primary">Download PDF</DownloadButton>
       </div>
       <ReportBody report={q.data} />
     </Page>

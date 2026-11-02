@@ -24,7 +24,7 @@ public class MachineService(TileTwinDbContext db, TimeProvider clock, AuditLogge
         return machines.Select(m => Summarize(m, sensors.GetValueOrDefault(m.Id) ?? [], now, alerts.GetValueOrDefault(m.Id), anomalies.Contains(m.Id))).ToList();
     }
 
-    public async Task<MachineDetailDto?> GetAsync(string id, CancellationToken ct = default)
+    public async Task<MachineDetailDto?> GetAsync(string id, bool includeMaintenance, CancellationToken ct = default)
     {
         var m = await db.Machines.AsNoTracking().Include(x => x.Zone).Include(x => x.MachineType)
             .FirstOrDefaultAsync(x => x.Id == id, ct);
@@ -32,7 +32,7 @@ public class MachineService(TileTwinDbContext db, TimeProvider clock, AuditLogge
 
         var sensors = (await LoadSensorsAsync([id], ct)).GetValueOrDefault(id) ?? [];
         var now = clock.GetUtcNow().UtcDateTime;
-        var maintenance = await db.MaintenanceRecords.AsNoTracking().Where(r => r.MachineId == id)
+        var maintenance = !includeMaintenance ? null : await db.MaintenanceRecords.AsNoTracking().Where(r => r.MachineId == id)
             .OrderByDescending(r => r.PerformedUtc).Take(10)
             .Select(r => new MaintenanceRecordDto(r.Id, r.MachineId, r.Type, r.Description, r.PerformedBy,
                 r.PerformedUtc, r.DurationHours, r.Outcome, r.DataOrigin))

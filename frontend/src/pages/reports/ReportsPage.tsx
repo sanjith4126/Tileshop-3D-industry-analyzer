@@ -1,11 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { BrainCircuit, ClipboardCheck, Download, Factory, FilePlus2, Files, Wrench, type LucideIcon } from 'lucide-react'
+import { BrainCircuit, ClipboardCheck, Factory, FilePlus2, Files, Wrench, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { apiSend } from '../../api/client'
 import { useMachines, useReports, useZones } from '../../api/hooks'
 import type { Report, ReportType } from '../../api/types'
 import { useAuth } from '../../auth/auth'
+import { DownloadButton } from '../../components/AuthMedia'
 import { DemoBadge, EmptyState, ErrorState, Loading, Page, PageHeader, Panel } from '../../components/States'
 import { ago, formatUtc } from '../../lib/status'
 
@@ -112,7 +113,7 @@ export default function ReportsPage() {
                     </td>
                     <td className="whitespace-nowrap text-muted" title={formatUtc(r.generatedUtc)}>{ago(r.generatedUtc)}</td>
                     <td className="text-muted">{r.generatedBy}</td>
-                    <td className="text-right"><a href={`/api/reports/${r.id}/pdf`} download className="btn btn-ghost btn-sm"><Download className="size-3.5" aria-hidden="true" />PDF</a></td>
+                    <td className="text-right"><DownloadButton path={`/api/reports/${r.id}/pdf`} fileName="report.pdf" className="btn btn-ghost btn-sm">PDF</DownloadButton></td>
                   </tr>
                 )
               })}

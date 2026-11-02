@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.FileProviders;
@@ -10,6 +11,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Threading.RateLimiting;
 using TileTwin.Api.Assistant;
 using TileTwin.Api.Configuration;
+using TileTwin.Api.Security;
 using TileTwin.Api.Workflows;
 using TileTwin.Infrastructure.Llm;
 using TileTwin.Api.Services;
@@ -66,7 +68,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<ActiveUsers>();
 builder.Services.AddSingleton<LoginThrottle>();
-builder.Services.AddAuthorization();
+// Nothing is open by default: endpoints without [AllowAnonymous] need a signed-in user, and each endpoint names the
+// permission it requires ([RequirePermission]); roles map to permissions through the seeded RolePermissions table.
+builder.Services.AddAuthorization(o => o.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+builder.Services.AddSingleton<IAuthorizationHandler, PermissionHandler>();
+builder.Services.AddSingleton<PermissionCatalog>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<CurrentUser>();
 
 builder.Services.AddScoped<AuditLogger>();
 builder.Services.AddScoped<MachineService>();
@@ -144,14 +153,18 @@ var app = builder.Build();
 config.LogFeatureStatus(app.Logger, app.Environment.IsDevelopment());
 await InitializeDatabaseAsync(app, config);
 
-app.MapOpenApi();
+app.MapOpenApi().AllowAnonymous(); // the API description, not data
 app.UseSwaggerUI(o =>
 {
     o.SwaggerEndpoint("/openapi/v1.json", "TileTwin API");
     o.RoutePrefix = "swagger";
 });
 
-// 3D asset manifest + optional GLB files from the repo's 3d-assets folder.
+app.UseAuthentication();
+app.UseAuthorization();
+
+// 3D asset manifest + optional GLB files from the repo's 3d-assets folder. After UseAuthorization, so the fallback
+// policy applies: only signed-in users get the plant layout.
 if (EnvFile.FindUpward("3d-assets", directory: true) is { } assetsDir)
 {
     var types = new FileExtensionContentTypeProvider();
@@ -163,9 +176,6 @@ if (EnvFile.FindUpward("3d-assets", directory: true) is { } assetsDir)
         ContentTypeProvider = types,
     });
 }
-
-app.UseAuthentication();
-app.UseAuthorization();
 app.UseRateLimiter();
 app.UseRequestTimeouts();
 app.MapControllers();

@@ -28,7 +28,7 @@ public class CharacterizationTests(ApiFactory factory)
     [Fact]
     public async Task Dashboard_figures_match_the_seeded_plant()
     {
-        var o = await factory.CreateClient().GetFromJsonAsync<JsonElement>("/api/overview");
+        var o = await (await factory.SignedInClientAsync()).GetFromJsonAsync<JsonElement>("/api/overview");
 
         var counts = o.GetProperty("statusCounts");
         Assert.Equal(13, counts.GetProperty("Normal").GetInt32());
@@ -52,7 +52,7 @@ public class CharacterizationTests(ApiFactory factory)
         var engineer = await As(Roles.MaintenanceEngineer);
         Assert.Equal(HttpStatusCode.Forbidden, (await engineer.PutAsJsonAsync("/api/admin/simulator", new SimulatorUpdateRequest(true), Json)).StatusCode);
 
-        var admin = await As(Roles.Admin);
+        var admin = await As(Roles.Administrator);
         using var scope = factory.Services.CreateScope();
         var engine = scope.ServiceProvider.GetRequiredService<SimulationEngine>();
         try

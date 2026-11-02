@@ -22,4 +22,6 @@
 | "Too many sign-in attempts for this account" | More than 10 attempts for one account within 5 minutes | Wait 5 minutes |
 | Cannot sign in as dev users | Not Development, or `DEV_SEED_USER_PASSWORD` empty | Set it in `.env` and restart the API (dev users are re-synced to that password at start) |
 | Backend tests fail to connect | The compose Postgres is not running | Start it; tests create and use `tiletwin_test` |
-| Want a clean demo state | — | Administration → **Reset demo data** (Admin). User-created rows are kept |
+| Want a clean demo state | — | Administration → **Reset demo data** (Administrator). User-created rows are kept |
+| "… is not available for your role" | The signed-in role lacks that page's permission (Appendix B) | Expected; sign in with a role that has it, e.g. Plant Manager |
+| `dev.viewer@` / `dev.admin@` no longer sign in | The roles were renamed (migration `RenameRolesAndAddPermissions`) | Use `dev.plantmanager@tiletwin.local` / `dev.administrator@tiletwin.local` |

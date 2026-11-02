@@ -52,7 +52,7 @@ Concept demo for a **fictional** tile plant. Everything runs locally; only Postg
 
 | Decision | Why |
 |---|---|
-| Reads anonymous, every write needs JWT + role | The spec requires non-AI modules to work with no optional variables; with no dev users there would be nobody to sign in. |
+| Every endpoint needs a signed-in user and a named permission (Appendix B) | Plant data is never public (section 12.2, decision D6). Endpoints name permissions (`[RequirePermission]`), never roles; the role → permission mapping is seeded by migration and the authorisation tests are generated from Appendix B. |
 | Critical ranks above Unknown | A critical reading must never be hidden by another sensor's missing data. |
 | Latest reading via `LEFT JOIN LATERAL` raw SQL | EF translated "latest per group" to a full-table `ROW_NUMBER` (600 ms → 8 ms). |
 | Downsampling in SQL (`date_bin`, avg/min/max) | Charts get ≤ ~300 points per sensor; spikes stay visible in the min–max band. |

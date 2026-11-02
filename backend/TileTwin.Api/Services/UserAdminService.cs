@@ -44,7 +44,7 @@ public class UserAdminService(UserManager<AppUser> users, AuditLogger audit, Til
         if (!Roles.All.Contains(req.Role)) return (null, $"Role must be one of {string.Join(", ", Roles.All)}");
         var user = await users.FindByIdAsync(id);
         if (user is null) return (null, null);
-        if (user.Email == admin && (req.Disabled || req.Role != Roles.Admin)) return (null, "You cannot disable or demote your own account");
+        if (user.Email == admin && (req.Disabled || req.Role != Roles.Administrator)) return (null, "You cannot disable or demote your own account");
 
         var current = await users.GetRolesAsync(user);
         await users.RemoveFromRolesAsync(user, current);

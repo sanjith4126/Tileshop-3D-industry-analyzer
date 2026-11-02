@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useMachine, useReadings } from '../../api/hooks'
 import type { ReadingsRange } from '../../api/types'
+import { useAuth } from '../../auth/auth'
 import { DemoBadge, EmptyState, ErrorState, Loading, Page, PageHeader, Panel } from '../../components/States'
 import { StatusBadge } from '../../components/StatusBadge'
 import { formatUtc, statusVar } from '../../lib/status'
@@ -15,6 +16,7 @@ const RANGES: ReadingsRange[] = ['1h', '24h', '7d']
 export default function MachineDetailPage() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
+  const { can } = useAuth()
   const [range, setRange] = useState<ReadingsRange>('24h')
   const machine = useMachine(id)
   const readings = useReadings(id, range)
@@ -33,7 +35,7 @@ export default function MachineDetailPage() {
         description={`${m.typeName} · ${m.zoneName} · maintenance: ${m.maintenanceStatus} · last reading ${formatUtc(m.lastReadingUtc)}`}
         actions={<>
           <button onClick={() => { focusEntity(m.id); navigate('/twin') }} className="btn btn-secondary"><Box className="size-4" aria-hidden="true" />Show in 3D</button>
-          <Link to={`/predictive?machine=${m.id}`} className="btn btn-primary"><Gauge className="size-4" aria-hidden="true" />Predictive maintenance</Link>
+          {can('anomalies.view') && <Link to={`/predictive?machine=${m.id}`} className="btn btn-primary"><Gauge className="size-4" aria-hidden="true" />Predictive maintenance</Link>}
         </>}
       />
 
@@ -60,7 +62,8 @@ export default function MachineDetailPage() {
       <div className="grid items-start gap-5 lg:grid-cols-2">
         <Panel title="Alerts for this machine" icon={<Siren className="size-4" />}><AlertsList machineId={m.id} /></Panel>
         <Panel title="Maintenance history" icon={<Wrench className="size-4" />}>
-          {recentMaintenance.length === 0 ? <EmptyState>No maintenance records.</EmptyState> : (
+          {recentMaintenance === null ? <EmptyState icon={false}>Maintenance records are not available for your role.</EmptyState>
+            : recentMaintenance.length === 0 ? <EmptyState>No maintenance records.</EmptyState> : (
             <ol className="relative m-4 space-y-4 border-l border-line pl-5">
               {recentMaintenance.map((r) => (
                 <li key={r.id} className="relative text-sm">

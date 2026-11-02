@@ -15,7 +15,7 @@ function Snippet({ text }: { text: string }) {
 }
 
 export default function KnowledgePage() {
-  const { hasRole } = useAuth()
+  const { can } = useAuth()
   const qc = useQueryClient()
   const docs = useQuery({ queryKey: ['documents'], queryFn: ({ signal }) => apiGet<{ searchMode: string; documents: Doc[] }>('/api/documents', signal) })
   const [q, setQ] = useState('')
@@ -80,7 +80,7 @@ export default function KnowledgePage() {
 
       <div className="grid items-start gap-5 lg:grid-cols-[22rem_minmax(0,1fr)]">
         <Panel title="Upload document" icon={<FileUp className="size-4" />}>
-          {!hasRole('Inspector', 'MaintenanceEngineer', 'Admin') ? <EmptyState icon={false}>Sign in as Inspector, Maintenance Engineer or Admin to upload.</EmptyState> : (
+          {!can('knowledge.manage') ? <EmptyState icon={false}>Your role can search documents but not upload them.</EmptyState> : (
             <form onSubmit={(e) => { e.preventDefault(); if (file) upload.mutate() }} className="space-y-3 p-4 text-xs">
               <input type="file" accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown" aria-label="Document (PDF, TXT or MD, max 10 MB)"
                 onChange={(e) => { upload.reset(); setFile(e.target.files?.[0] ?? null) }} className="file-input" />
@@ -112,8 +112,8 @@ export default function KnowledgePage() {
                     </td>
                     <td className="text-xs whitespace-nowrap text-muted">{formatUtc(d.uploadedUtc)}<span className="block">{d.uploadedBy}</span></td>
                     <td className="text-right whitespace-nowrap">
-                      {hasRole('Inspector', 'MaintenanceEngineer', 'Admin') && <button onClick={() => action.mutate({ id: d.id, kind: 'reindex' })} className="btn btn-ghost btn-sm"><RefreshCw className="size-3.5" aria-hidden="true" />Re-index</button>}
-                      {hasRole('MaintenanceEngineer', 'Admin') && <button onClick={() => { if (window.confirm(`Delete "${d.title}"?`)) action.mutate({ id: d.id, kind: 'delete' }) }} className="btn btn-danger btn-sm ml-1"><Trash2 className="size-3.5" aria-hidden="true" />Delete</button>}
+                      {can('knowledge.manage') && <button onClick={() => action.mutate({ id: d.id, kind: 'reindex' })} className="btn btn-ghost btn-sm"><RefreshCw className="size-3.5" aria-hidden="true" />Re-index</button>}
+                      {can('knowledge.manage') && <button onClick={() => { if (window.confirm(`Delete "${d.title}"?`)) action.mutate({ id: d.id, kind: 'delete' }) }} className="btn btn-danger btn-sm ml-1"><Trash2 className="size-3.5" aria-hidden="true" />Delete</button>}
                     </td>
                   </tr>
                 ))}

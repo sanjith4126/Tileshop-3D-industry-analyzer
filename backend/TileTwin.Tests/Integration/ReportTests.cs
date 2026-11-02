@@ -14,7 +14,7 @@ public class ReportTests(ApiFactory factory)
     async Task<HttpClient> SignedIn()
     {
         var c = factory.CreateClient();
-        c.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(c, Roles.Viewer));
+        c.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(c, Roles.PlantManager));
         return c;
     }
 

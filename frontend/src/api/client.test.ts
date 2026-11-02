@@ -1,7 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { apiGet, getSession, refreshSession, setSession, type Session } from './client'
 
-const session = (token: string): Session => ({ token, email: 'x@y', displayName: null, roles: ['Viewer'], expiresUtc: '2999-01-01T00:00:00Z' })
+const session = (token: string): Session => ({ token, email: 'x@y', displayName: null, roles: ['PlantManager'], permissions: ['plant.view'], expiresUtc: '2999-01-01T00:00:00Z' })
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 
 afterEach(() => {

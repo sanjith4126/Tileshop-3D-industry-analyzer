@@ -36,7 +36,7 @@ public class TileInspectionTests(ApiFactory factory)
     {
         var client = factory.CreateClient();
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsync("/api/tile-inspections", Form(Png, "t.png"))).StatusCode);
-        client.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(client, Roles.Viewer));
+        client.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(client, Roles.PlantManager));
         Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsync("/api/tile-inspections", Form(Png, "t.png"))).StatusCode);
     }
 

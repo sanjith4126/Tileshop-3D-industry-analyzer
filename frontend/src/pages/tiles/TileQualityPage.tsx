@@ -3,6 +3,7 @@ import { CircleAlert, CircleCheck, FlaskConical, History, ImageUp, ScanSearch, U
 import { useEffect, useState } from 'react'
 import { apiGet, apiUpload } from '../../api/client'
 import { useAuth } from '../../auth/auth'
+import { AuthImage } from '../../components/AuthMedia'
 import { EmptyState, ErrorState, Loading, Page, PageHeader, Panel } from '../../components/States'
 import { formatUtc } from '../../lib/status'
 
@@ -43,7 +44,7 @@ function Outcome({ r }: { r: TileResult }) {
 }
 
 export default function TileQualityPage() {
-  const { hasRole } = useAuth()
+  const { can } = useAuth()
   const qc = useQueryClient()
   const status = useQuery({ queryKey: ['tile-status'], queryFn: ({ signal }) => apiGet<TileStatus>('/api/tile-inspections/status', signal) })
   const history = useQuery({ queryKey: ['tile-history'], queryFn: ({ signal }) => apiGet<TileResult[]>('/api/tile-inspections', signal) })
@@ -119,7 +120,7 @@ export default function TileQualityPage() {
         <div className="grid items-start gap-5 lg:grid-cols-2">
           <Panel title="Upload tile image" icon={<ImageUp className="size-4" />}>
             <div className="space-y-3 p-4 text-sm">
-              {!hasRole('Inspector', 'MaintenanceEngineer', 'Admin') ? <EmptyState icon={false}>Sign in as Inspector, Maintenance Engineer or Admin to upload.</EmptyState> : (
+              {!can('tiles.inspect') ? <EmptyState icon={false}>Your role can view tile inspections but not submit images.</EmptyState> : (
                 <form onSubmit={(e) => { e.preventDefault(); if (file) upload.mutate(file) }} className="space-y-3">
                   <label
                     onDragOver={(e) => { e.preventDefault(); setDragging(true) }} onDragLeave={() => setDragging(false)}
@@ -147,7 +148,7 @@ export default function TileQualityPage() {
               <ul>
                 {history.data.map((r) => (
                   <li key={r.id} className="flex gap-3 border-b border-line/70 px-4 py-3 last:border-0">
-                    <img src={r.imageUrl} alt={r.originalFileName} className="size-14 shrink-0 rounded-lg border border-line object-cover" />
+                    <AuthImage src={r.imageUrl} alt={r.originalFileName} className="size-14 shrink-0 rounded-lg border border-line object-cover" />
                     <div className="min-w-0 text-xs">
                       <p className="truncate text-sm text-fg">{r.originalFileName}</p>
                       <p className="text-muted">{formatUtc(r.uploadedUtc)} · {r.uploadedBy}</p>

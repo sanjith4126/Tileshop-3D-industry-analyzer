@@ -6,12 +6,13 @@ service and the frontend as in the README, then open http://localhost:5180.
 ## Before the demo
 
 1. Start Postgres, the API, the ML service and the frontend (README → Run).
-2. Run `python scripts/smoke.py` — all 20 checks should pass (it rehearses Scenarios A–D at API level).
-3. Optional: **Administration → Reset demo data** (sign in as `dev.admin@tiletwin.local`) so the
+2. Run `python scripts/smoke.py` — all 21 checks should pass (it rehearses Scenarios A–D at API level).
+3. Optional: **Administration → Reset demo data** (sign in as `dev.administrator@tiletwin.local`) so the
    HP-002 drift and alert timeline are fresh. Wait ~20 s, then ~5 min for the first ML scores (or use
    **Score now** on Predictive Maintenance).
-4. Dev user password = `DEV_SEED_USER_PASSWORD` in `.env`. Sign in with the **Sign in** button (top right);
-   the demo-account buttons in the dialog fill in the email.
+4. Dev user password = `DEV_SEED_USER_PASSWORD` in `.env`. The app opens on its sign-in screen; the
+   demo-account buttons fill in the email. Use the **Plant Manager** or **Administrator** account for the
+   scenarios (inspectors, by design, see neither anomaly scores nor maintenance records).
 5. Light/dark theme: the sun/moon button in the top bar (remembered per browser).
 
 ## Scripted data patterns (deterministic seed `demo-v1`, fixed random seed 20261022)
@@ -44,15 +45,15 @@ Glazing & Inspection zone has open Critical/High observations with corrective-ac
    vibration beyond critical, oil temperature beyond warning, open ML anomaly).
 2. Click **Show in 3D** → the camera flies to HP-002; the side panel shows readings, open alerts and maintenance.
 3. Click **Open machine details** → vibration and oil-temperature charts with warning/critical limit
-   lines (switch 1 h / 24 h / 7 d); threshold alerts listed (sign in to acknowledge).
+   lines (switch 1 h / 24 h / 7 d); threshold alerts listed (acknowledge as Plant Manager, engineer or Administrator).
 4. Click **Predictive maintenance** → pattern observed (rising vibration and temperature), the ML
    anomaly score with plain-English explanation (largest deviation `VIB_mean`), suggested inspection
    actions with rule IDs, data-quality warnings and the label
    "Suggestion — requires review by a qualified engineer."
    - ML scores refresh every 5 minutes; signed-in users can press **Score now**.
    - Stop the ML service to show the honest "ML service unavailable — no anomaly score" state.
-5. Click **Anomaly report (PDF)**, sign in (any dev user), **Generate report**, then **Download PDF**.
-6. On **Predictive Maintenance**, sign in and click **Run + PDF report** in "Maintenance prioritisation
+5. Click **Anomaly report (PDF)**, **Generate report**, then **Download PDF**.
+6. On **Predictive Maintenance**, click **Run + PDF report** in "Maintenance prioritisation
    workflow": HP-002 ranks first (Immediate band) with every score point explained, PUMP-002 follows
    (missing data), CONV-003 is listed as excluded (offline). Click **Download PDF report**.
 
@@ -70,7 +71,7 @@ Glazing & Inspection zone has open Critical/High observations with corrective-ac
 
 ## Scenario D — AI assistant
 
-- **With a key** (`GROQ_API_KEY` + `LLM__Provider=groq`, or `ANTHROPIC_API_KEY` + `LLM__Model`, in `.env`; restart API): sign in, open
+- **With a key** (`GROQ_API_KEY` + `LLM__Provider=groq`, or `ANTHROPIC_API_KEY` + `LLM__Model`, in `.env`; restart API): open
   **AI Assistant**, ask "Which machines have active alerts?". The answer cites record IDs (e.g.
   MACHINE-HP-002, alert/sensor IDs), separates facts from hypotheses, mentions synthetic data, lists the
   tool calls it made and offers **Show MACHINE-HP-002 in 3D**.

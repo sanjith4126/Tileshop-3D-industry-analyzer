@@ -12,7 +12,7 @@ public class HonestDataTests(ApiFactory factory)
     async Task<JsonElement> GetAsync(string path)
     {
         var client = factory.CreateClient();
-        client.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(client, Roles.Viewer));
+        client.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(client, Roles.PlantManager));
         return JsonDocument.Parse(await client.GetStringAsync(path)).RootElement;
     }
 

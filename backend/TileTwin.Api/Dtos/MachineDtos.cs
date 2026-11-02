@@ -25,9 +25,9 @@ public sealed record MaintenanceRecordDto(
     public string DataClassification => PlantData.Classification;
 }
 
-/// <summary>Snapshot of one machine at GeneratedAt.</summary>
+/// <summary>Snapshot of one machine at GeneratedAt. RecentMaintenance is null for roles that may not view maintenance records.</summary>
 public sealed record MachineDetailDto(
-    MachineSummaryDto Machine, IReadOnlyList<SensorDto> Sensors, IReadOnlyList<MaintenanceRecordDto> RecentMaintenance, DateTime GeneratedAt)
+    MachineSummaryDto Machine, IReadOnlyList<SensorDto> Sensors, IReadOnlyList<MaintenanceRecordDto>? RecentMaintenance, DateTime GeneratedAt)
 {
     public string DataClassification => PlantData.Classification;
 }
@@ -47,4 +47,6 @@ public sealed record LoginRequest(
     [Required, EmailAddress, MaxLength(256)] string Email,
     [Required, MaxLength(256)] string Password);
 
-public sealed record LoginResponse(string Token, DateTime ExpiresUtc, string Email, string? DisplayName, IReadOnlyList<string> Roles);
+/// <summary>Body of sign-in and refresh. Permissions are listed for the UI only; the token itself carries roles, not permissions.</summary>
+public sealed record LoginResponse(string Token, DateTime ExpiresUtc, string Email, string? DisplayName, IReadOnlyList<string> Roles,
+    IReadOnlyList<string> Permissions);

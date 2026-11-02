@@ -1,9 +1,8 @@
-import { Bell, ChevronRight, LogIn, LogOut, Moon, Sun } from 'lucide-react'
+import { Bell, ChevronRight, LogOut, Moon, Sun } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import { useMachines } from '../api/hooks'
 import { useAuth } from '../auth/auth'
-import { SignInDialog } from '../auth/SignInDialog'
 import { useOverview } from '../pages/OverviewData'
 import { useTheme } from '../theme'
 import { navFor } from './nav'
@@ -46,7 +45,8 @@ function AlertsButton() {
   )
 }
 
-function Account({ onSignIn }: { onSignIn: () => void }) {
+/** The signed-in user's menu (the shell is only shown to signed-in users). */
+function Account() {
   const { session, logout } = useAuth()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -57,8 +57,7 @@ function Account({ onSignIn }: { onSignIn: () => void }) {
     return () => document.removeEventListener('mousedown', close)
   }, [open])
 
-  if (!session)
-    return <button onClick={onSignIn} className="btn btn-secondary btn-sm"><LogIn className="size-3.5" aria-hidden="true" />Sign in</button>
+  if (!session) return null
 
   const initials = (session.displayName ?? session.email).replace(/^DEV ONLY — /, '').slice(0, 2).toUpperCase()
   return (
@@ -86,7 +85,6 @@ function Account({ onSignIn }: { onSignIn: () => void }) {
 export function TopBar() {
   const { pathname } = useLocation()
   const { theme, toggle } = useTheme()
-  const [signIn, setSignIn] = useState(false)
   const nav = navFor(pathname)
   const detail = nav && pathname !== nav.to ? decodeURIComponent(pathname.slice(nav.to.length + 1)) : null
 
@@ -111,9 +109,8 @@ export function TopBar() {
           {theme === 'dark' ? <Sun className="size-4" aria-hidden="true" /> : <Moon className="size-4" aria-hidden="true" />}
         </button>
         <span className="mx-1 h-6 w-px bg-line" aria-hidden="true" />
-        <Account onSignIn={() => setSignIn(true)} />
+        <Account />
       </div>
-      <SignInDialog open={signIn} onClose={() => setSignIn(false)} />
     </header>
   )
 }

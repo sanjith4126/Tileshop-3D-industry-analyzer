@@ -2,7 +2,7 @@
 
 Usage (with Postgres, API, ML service and frontend running):
     python scripts/smoke.py
-Signs in with the DEV ONLY users (password = DEV_SEED_USER_PASSWORD from .env). It creates a report,
+Signs in with the DEV ONLY users (password = DEV_SEED_USER_PASSWORD from .env); every API read needs a signed-in user. It creates a report,
 a workflow execution and one tile-inspection upload (user-created rows, kept by "Reset demo data").
 """
 
@@ -76,55 +76,62 @@ def main() -> int:
     check(s == 200 and h["database"] == "ok", "API healthy and database connected")
     s, _ = call("GET", "/api/health", base=FRONTEND)
     check(s == 200, "Frontend serves and proxies /api")
+    s, _ = j("GET", "/api/machines")
+    check(s == 401, "Plant data needs a signed-in user (anonymous request refused)")
+    pm = login("PlantManager")
+    check(pm is not None, "Dev user sign-in works (DEV_SEED_USER_PASSWORD)")
 
-    s, machines = j("GET", "/api/machines")
+    s, machines = j("GET", "/api/machines", token=pm)
     by = {m["id"]: m for m in machines} if s == 200 else {}
     check(by.get("MACHINE-HP-002", {}).get("status") == "Critical", "HP-002 is Critical (scripted drift)")
     check(by.get("MACHINE-PUMP-002", {}).get("status") == "Unknown", "PUMP-002 is Unknown (missing data, never Normal)")
     check(by.get("MACHINE-CONV-003", {}).get("status") == "Offline", "CONV-003 is Offline")
 
     # Scenario A — remote inspection
-    s, zones = j("GET", "/api/inspection/zones")
+    s, zones = j("GET", "/api/inspection/zones", token=pm)
     glaze = next((z for z in zones or [] if z["id"] == "ZONE-GLAZE-A"), None)
     check(glaze is not None and glaze["openHighPriority"] >= 1, "A: Glazing zone has open high-priority observations")
-    s, obs = j("GET", "/api/observations?zoneId=ZONE-GLAZE-A&priority=Critical")
+    s, obs = j("GET", "/api/observations?zoneId=ZONE-GLAZE-A&priority=Critical", token=pm)
     if obs:
-        s, d = j("GET", f"/api/observations/{obs[0]['id']}")
+        s, d = j("GET", f"/api/observations/{obs[0]['id']}", token=pm)
         check(s == 200 and len(d["correctiveActions"]) >= 1 and len(d["history"]) >= 1, "A: observation detail has corrective actions and history")
     else:
         check(False, "A: a critical Glazing observation exists")
-    s, summ = j("POST", "/api/inspection/summary", {"zoneId": "ZONE-GLAZE-A"})
+    s, summ = j("POST", "/api/inspection/summary", {"zoneId": "ZONE-GLAZE-A"}, pm)
     check(s == 200 and any("OBS-" in line for line in summ["lines"]), "A: inspection summary cites observation codes")
 
     # Scenario B — machine anomaly
-    s, r = j("GET", "/api/machines/MACHINE-HP-002/readings?range=24h")
+    s, r = j("GET", "/api/machines/MACHINE-HP-002/readings?range=24h", token=pm)
     vib = next((x for x in (r or {}).get("sensors", []) if x["sensorId"] == "SENSOR-HP-002-VIB"), None)
     check(vib is not None and vib["criticalMax"] == 7.1 and len(vib["points"]) > 200, "B: vibration chart data with limits")
-    s, alerts = j("GET", "/api/alerts?machineId=MACHINE-HP-002")
+    s, alerts = j("GET", "/api/alerts?machineId=MACHINE-HP-002", token=pm)
     check(s == 200 and any(a["severity"] == "Critical" for a in alerts), "B: HP-002 has a critical threshold alert")
-    s, p = j("GET", "/api/predictive/MACHINE-HP-002")
+    s, p = j("GET", "/api/predictive/MACHINE-HP-002", token=pm)
     check(s == 200 and p["reviewLabel"].startswith("Suggestion") and p["suggestedActions"], "B: predictive suggestions with review label")
     eng = login("MaintenanceEngineer")
-    check(eng is not None, "Dev user sign-in works (DEV_SEED_USER_PASSWORD)")
+    scored = None
     if p and p["latestScore"] is None:
         # Scheduled scoring runs every few minutes; right after start-up press "Score now" like a user would.
-        j("POST", "/api/predictive/MACHINE-HP-002/score", None, eng)
-        s, p = j("GET", "/api/predictive/MACHINE-HP-002")
+        _, scored = j("POST", "/api/predictive/MACHINE-HP-002/score", None, eng)
+        s, p = j("GET", "/api/predictive/MACHINE-HP-002", token=pm)
     if p and p["ml"]["available"]:
-        check(p["latestScore"] is not None, "B: ML anomaly score present (ML service reachable)")
+        # A score, or an honest refusal: after downtime the last hour has gaps (never back-filled) and is not scored.
+        refused = "Insufficient data" in str((scored or {}).get("problem"))
+        check(p["latestScore"] is not None or refused,
+              "B: ML anomaly score present" if p["latestScore"] else "B: ML refuses to score a window with gaps (no fabricated score)")
     else:
         check(p is not None and p["latestScore"] is None, "B: ML unavailable is reported honestly (no score)")
     s, w = j("POST", "/api/workflows/maintenance-prioritisation", {"zoneId": None, "createReport": True, "aiWording": False}, eng)
     out = (w or {}).get("output") or {}
     check(s == 200 and out.get("ranking", [{}])[0].get("machineId") == "MACHINE-HP-002", "B: prioritisation workflow ranks HP-002 first")
     if out.get("reportId"):
-        s, pdf = call("GET", f"/api/reports/{out['reportId']}/pdf")
+        s, pdf = call("GET", f"/api/reports/{out['reportId']}/pdf", token=pm)
         check(s == 200 and pdf[:4] == b"%PDF", "B: PDF report downloads")
     else:
         check(False, "B: workflow stored a report")
 
     # Scenario C — tile quality
-    s, ts = j("GET", "/api/tile-inspections/status")
+    s, ts = j("GET", "/api/tile-inspections/status", token=pm)
     check(s == 200, f"C: tile model status reported ({(ts or {}).get('status', '?')})")
     insp = login("Inspector")
     sample = (ROOT / "frontend/public/tile-samples/sample-crack.png").read_bytes()
@@ -135,19 +142,18 @@ def main() -> int:
     check(s == 201 and bool(honest), f"C: upload stored with an honest outcome ({t.get('outcome')})")
 
     # Scenario D — AI assistant
-    s, st = j("GET", "/api/assistant/status")
-    viewer = login("Viewer")
+    s, st = j("GET", "/api/assistant/status", token=pm)
     if st and st["configured"]:
-        s, a = j("POST", "/api/assistant/chat", {"messages": [{"role": "user", "text": "Which machines have active alerts?"}]}, viewer)
+        s, a = j("POST", "/api/assistant/chat", {"messages": [{"role": "user", "text": "Which machines have active alerts?"}]}, pm)
         check(s == 200 and "MACHINE-HP-002" in a.get("answer", ""), "D: assistant answers with record IDs")
     else:
-        s, a = j("POST", "/api/assistant/chat", {"messages": [{"role": "user", "text": "Which machines have active alerts?"}]}, viewer)
+        s, a = j("POST", "/api/assistant/chat", {"messages": [{"role": "user", "text": "Which machines have active alerts?"}]}, pm)
         check(s == 503 and "AI NOT CONFIGURED" in json.dumps(a), "D: no key -> AI NOT CONFIGURED, no canned answer")
 
-    s, k = j("GET", "/api/documents/search?q=interlock")
+    s, k = j("GET", "/api/documents/search?q=interlock", token=pm)
     check(s == 200 and k["hits"], f"Knowledge Centre search works ({(k or {}).get('mode')})")
-    s, _ = j("POST", "/api/admin/reset-demo", None, viewer)
-    check(s == 403, "Admin-only endpoint refuses a Viewer")
+    s, _ = j("POST", "/api/admin/reset-demo", None, pm)
+    check(s == 403, "Administrator-only endpoint refuses a Plant Manager")
 
     failed = [label for ok, label in results if not ok]
     print(f"\n{len(results) - len(failed)}/{len(results)} checks passed")

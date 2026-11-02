@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { getSession, setSession } from '../../api/client'
 import type { Alert, SensorSeries } from '../../api/types'
-import { mockApi, renderWithProviders } from '../../test-utils'
+import { mockApi, renderWithProviders, sessionAs } from '../../test-utils'
 import { AlertsList } from './AlertsList'
 import { SensorChart } from './SensorChart'
 
@@ -12,36 +12,29 @@ const alert: Alert = {
   detectedUtc: '2026-10-23T06:00:00Z', status: 'Open', resolvedUtc: null, dataOrigin: 'Synthetic', dataClassification: 'SYNTHETIC', history: [],
 }
 
-const session = (roles: string[]) => ({ token: 't', email: 'x@y', displayName: null, roles, expiresUtc: '2999-01-01T00:00:00Z' })
-
 beforeEach(() => { mockApi({ '/api/alerts': [alert] }) })
 afterEach(() => {
   vi.unstubAllGlobals()
   setSession(null)
 })
 
-it('shows alert value, threshold and severity; no actions when signed out', async () => {
+it('shows alert value, threshold and severity; an inspector sees no actions (Appendix B)', async () => {
+  // The session is restored from the refresh cookie, exactly as after a page reload.
+  mockApi({ '/api/alerts': [alert], '/api/v1/auth/refresh': sessionAs('Inspector') })
   renderWithProviders(<AlertsList />)
   expect(await screen.findByText('7.2 mm/s (limit 7.1)')).toBeInTheDocument()
   expect(screen.getByText('Critical')).toBeInTheDocument()
+  await waitFor(() => expect(getSession()?.roles).toEqual(['Inspector']))
   expect(screen.queryByRole('button', { name: 'Acknowledge' })).not.toBeInTheDocument()
-  expect(screen.getByText(/Sign in as Inspector/)).toBeInTheDocument()
+  expect(screen.getByText(/Your role can view alerts/)).toBeInTheDocument()
 })
 
-it('Viewer cannot act; Inspector can acknowledge but not resolve', async () => {
-  // The session is restored from the refresh cookie, exactly as after a page reload.
-  mockApi({ '/api/alerts': [alert], '/api/v1/auth/refresh': session(['Viewer']) })
-  const { unmount } = renderWithProviders(<AlertsList />)
-  await screen.findByText('Vibration')
-  await waitFor(() => expect(getSession()?.roles).toEqual(['Viewer']))
-  expect(screen.queryByRole('button', { name: 'Acknowledge' })).not.toBeInTheDocument()
-  unmount()
-  setSession(null)
-
-  mockApi({ '/api/alerts': [alert], '/api/v1/auth/refresh': session(['Inspector']) })
+it('a plant manager can acknowledge and resolve', async () => {
+  mockApi({ '/api/alerts': [alert], '/api/v1/auth/refresh': sessionAs('PlantManager') })
   renderWithProviders(<AlertsList />)
   expect(await screen.findByRole('button', { name: 'Acknowledge' })).toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: 'Resolve' })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Resolve' })).toBeInTheDocument()
+  setSession(null)
 })
 
 const at = (m: number) => new Date(Date.UTC(2026, 9, 23, 6, m)).toISOString()

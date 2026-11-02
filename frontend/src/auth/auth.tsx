@@ -5,9 +5,12 @@ export type { Session }
 
 interface AuthValue {
   session: Session | null
+  /** False until the first attempt to restore the session from the refresh cookie has finished. */
+  ready: boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
-  hasRole: (...roles: string[]) => boolean
+  /** True when the user holds any of the permissions. */
+  can: (...permissions: string[]) => boolean
 }
 
 const AuthContext = createContext<AuthValue | null>(null)
@@ -15,15 +18,17 @@ const AuthContext = createContext<AuthValue | null>(null)
 /** Session state for the UI. The access token stays in memory (api/client); a reload restores it from the refresh cookie. */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setState] = useState<Session | null>(getSession)
+  const [ready, setReady] = useState(() => getSession() !== null)
 
   useEffect(() => {
     const off = onSessionChange(setState)
-    if (!getSession()) void refreshSession()
+    if (!getSession()) void refreshSession().finally(() => setReady(true))
     return off
   }, [])
 
   const value: AuthValue = {
     session,
+    ready,
     login: async (email, password) => {
       setSession(await apiSend<Session>('POST', '/api/v1/auth/login', { email, password }))
     },
@@ -31,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await fetch('/api/v1/auth/logout', { method: 'POST' }).catch(() => undefined) // revokes the session server-side
       setSession(null)
     },
-    hasRole: (...roles) => !!session && roles.some((r) => session.roles.includes(r)),
+    can: (...permissions) => !!session && permissions.some((p) => session.permissions.includes(p)),
   }
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

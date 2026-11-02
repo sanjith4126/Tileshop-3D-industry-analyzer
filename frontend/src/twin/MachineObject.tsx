@@ -1,6 +1,7 @@
 import { Edges, Html, useGLTF } from '@react-three/drei'
 import { Component, Suspense, useMemo, useState, type ReactNode } from 'react'
 import * as THREE from 'three'
+import { getSession } from '../api/client'
 import type { MachineSummary } from '../api/types'
 import { STATUS_META, shortId, statusHex } from '../lib/status'
 import type { ThemeColors } from '../theme'
@@ -18,9 +19,13 @@ function Procedural({ entity }: { entity: ManifestEntity }) {
   }
 }
 
-/** useGLTF caches by URL, so repeated machines share one loaded model. */
+/** useGLTF caches by URL, so repeated machines share one loaded model. 3D assets need a signed-in user, so the
+ * loader sends the access token. */
 function Gltf({ url }: { url: string }) {
-  const { scene } = useGLTF(url)
+  const { scene } = useGLTF(url, undefined, undefined, (loader) => {
+    const token = getSession()?.token
+    if (token) loader.setRequestHeader({ Authorization: `Bearer ${token}` })
+  })
   const clone = useMemo(() => scene.clone(true), [scene])
   return <primitive object={clone} />
 }

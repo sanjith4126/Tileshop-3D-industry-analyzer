@@ -3,26 +3,28 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using TileTwin.Api.Assistant;
+using TileTwin.Api.Security;
+using TileTwin.Domain;
 using TileTwin.Infrastructure.Llm;
 
 namespace TileTwin.Api.Controllers;
 
-[ApiController, Route("api/assistant")]
-public class AssistantController(AssistantService assistant, ILlmProvider llm, ILogger<AssistantController> log) : ControllerBase
+[ApiController, Route("api/assistant"), RequirePermission(Permissions.AssistantUse)]
+public class AssistantController(AssistantService assistant, ILlmProvider llm, CurrentUser currentUser, ILogger<AssistantController> log) : ControllerBase
 {
     public const string NotConfigured = "AI NOT CONFIGURED — set GROQ_API_KEY, or ANTHROPIC_API_KEY and LLM__Model";
 
     [HttpGet("status")]
     public IActionResult Status() => Ok(new { configured = llm.IsConfigured, model = llm.IsConfigured ? llm.Description : null, message = llm.IsConfigured ? null : NotConfigured });
 
-    [HttpPost("chat"), Authorize, EnableRateLimiting("assistant"), Microsoft.AspNetCore.Http.Timeouts.RequestTimeout("long")]
+    [HttpPost("chat"), EnableRateLimiting("assistant"), Microsoft.AspNetCore.Http.Timeouts.RequestTimeout("long")]
     public async Task<IActionResult> Chat(ChatRequest req, CancellationToken ct)
     {
         if (!llm.IsConfigured) return StatusCode(503, new { configured = false, error = NotConfigured });
         if (req.Messages[^1].Role != "user") return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]> { ["messages"] = ["Last message must be from the user"] }));
         try
         {
-            return Ok(await assistant.ChatAsync(req, User.Identity!.Name!, ct));
+            return Ok(await assistant.ChatAsync(req, User.Identity!.Name!, await currentUser.PermissionsAsync(), ct));
         }
         catch (AnthropicApiException ex)
         {

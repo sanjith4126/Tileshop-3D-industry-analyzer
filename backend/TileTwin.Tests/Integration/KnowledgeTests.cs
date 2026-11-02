@@ -52,31 +52,33 @@ public class KnowledgeTests(ApiFactory factory)
     [Fact]
     public async Task Seeded_demo_documents_are_keyword_searchable_with_source_attribution()
     {
-        var r = await factory.CreateClient().GetFromJsonAsync<SearchResult>("/api/documents/search?q=interlock bypassed", Json);
+        var r = await (await factory.SignedInClientAsync()).GetFromJsonAsync<SearchResult>("/api/documents/search?q=interlock bypassed", Json);
         Assert.Equal(KnowledgeService.KeywordMode, r!.Mode);
         var hit = Assert.Single(r.Hits, h => h.DocumentTitle.StartsWith("Glaze line safety"));
         Assert.Contains("«", hit.Snippet);
-        Assert.Contains("keyword search (embeddings not configured)", await factory.CreateClient().GetStringAsync("/api/documents"));
+        Assert.Contains("keyword search (embeddings not configured)", await (await factory.SignedInClientAsync()).GetStringAsync("/api/documents"));
     }
 
     [Fact]
     public async Task Upload_txt_and_pdf_index_search_reindex_and_delete()
     {
-        var inspector = await As(Roles.Inspector);
-        var txt = await inspector.PostAsync("/api/documents", Form("Kiln roller lubrication: grease the zirconium rollers weekly.\n\nCheck drive chain."u8.ToArray(), "kiln.txt", "Kiln rollers"));
+        var manager = await As(Roles.PlantManager);
+        var txt = await manager.PostAsync("/api/documents", Form("Kiln roller lubrication: grease the zirconium rollers weekly.\n\nCheck drive chain."u8.ToArray(), "kiln.txt", "Kiln rollers"));
         Assert.Equal(HttpStatusCode.OK, txt.StatusCode);
         var doc = (await txt.Content.ReadFromJsonAsync<DocumentDto>(Json))!;
         Assert.Equal((DocumentStatus.Indexed, 1, "Kiln rollers"), (doc.Status, doc.ChunkCount, doc.Title));
 
         QuestPDF.Settings.License = LicenseType.Community;
         var pdfBytes = QuestPDF.Fluent.Document.Create(d => d.Page(p => p.Content().Text("Pump cavitation troubleshooting: check the suction strainer."))).GeneratePdf();
-        var pdf = (await (await inspector.PostAsync("/api/documents", Form(pdfBytes, "pump.pdf"))).Content.ReadFromJsonAsync<DocumentDto>(Json))!;
+        var pdf = (await (await manager.PostAsync("/api/documents", Form(pdfBytes, "pump.pdf"))).Content.ReadFromJsonAsync<DocumentDto>(Json))!;
         Assert.Equal("application/pdf", pdf.ContentType);
 
+        var inspector = await As(Roles.Inspector);   // reads and searches, but does not manage documents
         var found = await inspector.GetFromJsonAsync<SearchResult>("/api/documents/search?q=cavitation strainer", Json);
         Assert.Contains(found!.Hits, h => h.DocumentId == pdf.Id);
 
-        Assert.Equal(HttpStatusCode.OK, (await inspector.PostAsync($"/api/documents/{doc.Id}/reindex", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await manager.PostAsync($"/api/documents/{doc.Id}/reindex", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await inspector.PostAsync($"/api/documents/{doc.Id}/reindex", null)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await inspector.DeleteAsync($"/api/documents/{doc.Id}")).StatusCode);
         var engineer = await As(Roles.MaintenanceEngineer);
         Assert.Equal(HttpStatusCode.NoContent, (await engineer.DeleteAsync($"/api/documents/{doc.Id}")).StatusCode);
@@ -86,15 +88,15 @@ public class KnowledgeTests(ApiFactory factory)
     }
 
     [Fact]
-    public async Task Binary_or_wrong_type_files_are_rejected_and_viewers_cannot_upload()
+    public async Task Binary_or_wrong_type_files_are_rejected_and_inspectors_cannot_upload()
     {
-        var viewer = await As(Roles.Viewer);
-        Assert.Equal(HttpStatusCode.Forbidden, (await viewer.PostAsync("/api/documents", Form("x"u8.ToArray(), "a.txt"))).StatusCode);
-
         var inspector = await As(Roles.Inspector);
-        var exe = await inspector.PostAsync("/api/documents", Form([0x4D, 0x5A, 0x00, 0x01, 0x02], "notes.txt"));
+        Assert.Equal(HttpStatusCode.Forbidden, (await inspector.PostAsync("/api/documents", Form("x"u8.ToArray(), "a.txt"))).StatusCode);
+
+        var engineer = await As(Roles.MaintenanceEngineer);
+        var exe = await engineer.PostAsync("/api/documents", Form([0x4D, 0x5A, 0x00, 0x01, 0x02], "notes.txt"));
         Assert.Equal(HttpStatusCode.BadRequest, exe.StatusCode);
-        Assert.Equal(HttpStatusCode.BadRequest, (await inspector.PostAsync("/api/documents", Form(Encoding.UTF8.GetBytes("hello"), "a.docx"))).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await engineer.PostAsync("/api/documents", Form(Encoding.UTF8.GetBytes("hello"), "a.docx"))).StatusCode);
     }
 
     [Fact]

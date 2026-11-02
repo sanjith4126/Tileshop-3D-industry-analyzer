@@ -15,7 +15,7 @@ public class MonitoringTests(ApiFactory factory)
     [Fact]
     public async Task Seeded_history_produces_HP002_alerts_at_crossing_times()
     {
-        var alerts = await factory.CreateClient().GetFromJsonAsync<List<AlertDto>>("/api/alerts?machineId=MACHINE-HP-002&limit=50", Json);
+        var alerts = await (await factory.SignedInClientAsync()).GetFromJsonAsync<List<AlertDto>>("/api/alerts?machineId=MACHINE-HP-002&limit=50", Json);
         var vib = alerts!.Where(a => a.SensorId == "SENSOR-HP-002-VIB").ToList();
 
         var warn = Assert.Single(vib, a => a.Severity == AlertSeverity.Warning);
@@ -25,42 +25,43 @@ public class MonitoringTests(ApiFactory factory)
         Assert.True(crit.ObservedValue > 7.1);
         Assert.Contains(alerts!, a => a.SensorId == "SENSOR-HP-002-TEMP" && a.Severity == AlertSeverity.Warning);
         // No other machine crosses a limit in the seeded data.
-        var all = await factory.CreateClient().GetFromJsonAsync<List<AlertDto>>("/api/alerts?limit=200", Json);
+        var all = await (await factory.SignedInClientAsync()).GetFromJsonAsync<List<AlertDto>>("/api/alerts?limit=200", Json);
         Assert.All(all!, a => Assert.Equal("MACHINE-HP-002", a.MachineId));
     }
 
     [Fact]
-    public async Task Acknowledge_and_resolve_enforce_roles_and_record_history()
+    public async Task Acknowledge_and_resolve_enforce_permissions_and_record_history()
     {
-        var client = factory.CreateClient();
-        var alert = (await client.GetFromJsonAsync<List<AlertDto>>("/api/alerts?machineId=MACHINE-HP-002&status=Open", Json))!
+        var alert = (await (await factory.SignedInClientAsync()).GetFromJsonAsync<List<AlertDto>>("/api/alerts?machineId=MACHINE-HP-002&status=Open", Json))!
             .First(a => a.SensorId == "SENSOR-HP-002-TEMP");
         var ack = $"/api/alerts/{alert.Id}/acknowledge";
         var body = new AlertActionRequest("Checked on site");
+        var client = factory.CreateClient();
 
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsJsonAsync(ack, body, Json)).StatusCode);
-        client.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(client, Roles.Viewer));
-        Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsJsonAsync(ack, body, Json)).StatusCode);
-
+        // Appendix B: inspectors see alerts but neither acknowledge nor resolve them.
         client.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(client, Roles.Inspector));
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsJsonAsync(ack, body, Json)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsJsonAsync($"/api/alerts/{alert.Id}/resolve", body, Json)).StatusCode);
+
+        client.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(client, Roles.PlantManager));
         var acked = await (await client.PostAsJsonAsync(ack, body, Json)).Content.ReadFromJsonAsync<AlertDto>(Json);
         Assert.Equal(AlertStatus.Acknowledged, acked!.Status);
         Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsJsonAsync(ack, body, Json)).StatusCode);   // already acknowledged
-        Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsJsonAsync($"/api/alerts/{alert.Id}/resolve", body, Json)).StatusCode);
 
         client.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(client, Roles.MaintenanceEngineer));
         var resolved = await (await client.PostAsJsonAsync($"/api/alerts/{alert.Id}/resolve", new AlertActionRequest(null), Json))
             .Content.ReadFromJsonAsync<AlertDto>(Json);
         Assert.Equal(AlertStatus.Resolved, resolved!.Status);
         Assert.Equal([AlertStatus.Acknowledged, AlertStatus.Resolved], resolved.History.Select(h => h.NewStatus));
-        Assert.Equal("dev.inspector@tiletwin.local", resolved.History[0].UserName);
+        Assert.Equal("dev.plantmanager@tiletwin.local", resolved.History[0].UserName);
         Assert.Equal("Checked on site", resolved.History[0].Comment);
     }
 
     [Fact]
     public async Task Readings_are_downsampled_with_limits()
     {
-        var client = factory.CreateClient();
+        var client = await factory.SignedInClientAsync();
         var r = await client.GetFromJsonAsync<ReadingsResponse>("/api/machines/MACHINE-HP-002/readings?range=24h", Json);
 
         Assert.Equal(300, r!.BucketSeconds);
@@ -127,7 +128,7 @@ public class MonitoringTests(ApiFactory factory)
     public async Task Readings_keep_gaps_as_empty_buckets()
     {
         // PUMP-002's flow sensor stopped reporting 45 minutes before the seed anchor (scripted gap).
-        var r = await factory.CreateClient().GetFromJsonAsync<ReadingsResponse>("/api/machines/MACHINE-PUMP-002/readings?range=1h", Json);
+        var r = await (await factory.SignedInClientAsync()).GetFromJsonAsync<ReadingsResponse>("/api/machines/MACHINE-PUMP-002/readings?range=1h", Json);
 
         Assert.Equal(60, r!.BucketSeconds);
         var flow = r.Sensors.Single(s => s.SensorId == "SENSOR-PUMP-002-FLOW");

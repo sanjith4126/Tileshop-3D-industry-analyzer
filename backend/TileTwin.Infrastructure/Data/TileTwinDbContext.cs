@@ -27,6 +27,21 @@ public class RefreshToken
     public string? RevokedReason { get; set; }
 }
 
+/// <summary>A named permission (master prompt section 12.2). Seeded from <see cref="TileTwin.Domain.Permissions"/>.</summary>
+public class PermissionEntry
+{
+    public required string Name { get; set; }
+    public required string Capability { get; set; }
+    public bool IsExtension { get; set; }
+}
+
+/// <summary>Role → permission mapping, seeded by migration and read-only at run time.</summary>
+public class RolePermission
+{
+    public required string RoleName { get; set; }
+    public required string PermissionName { get; set; }
+}
+
 /// <summary>Single-row table holding demo bookkeeping (which seed batch is loaded and its time anchor).</summary>
 public class DemoState
 {
@@ -64,6 +79,8 @@ public class TileTwinDbContext(DbContextOptions<TileTwinDbContext> options) : Id
     public DbSet<DocumentChunk> DocumentChunks => Set<DocumentChunk>();
     public DbSet<DemoState> DemoState => Set<DemoState>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<PermissionEntry> Permissions => Set<PermissionEntry>();
+    public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
     {
@@ -82,6 +99,22 @@ public class TileTwinDbContext(DbContextOptions<TileTwinDbContext> options) : Id
             e.HasIndex(t => t.TokenHash).IsUnique();
             e.HasIndex(t => t.FamilyId);
             e.HasIndex(t => t.UserId);
+        });
+
+        b.Entity<PermissionEntry>(e =>
+        {
+            e.ToTable("Permissions");
+            e.HasKey(x => x.Name);
+            e.Property(x => x.Name).HasMaxLength(64);
+            e.Property(x => x.Capability).HasMaxLength(200);
+            e.HasData(Domain.Permissions.All.Select(d => new PermissionEntry { Name = d.Name, Capability = d.Capability, IsExtension = d.Extension }));
+        });
+        b.Entity<RolePermission>(e =>
+        {
+            e.HasKey(x => new { x.RoleName, x.PermissionName });
+            e.Property(x => x.RoleName).HasMaxLength(64);
+            e.HasOne<PermissionEntry>().WithMany().HasForeignKey(x => x.PermissionName);
+            e.HasData(Domain.Permissions.All.SelectMany(d => d.Roles.Select(r => new RolePermission { RoleName = r, PermissionName = d.Name })));
         });
 
         b.Entity<Zone>().HasOne<Site>().WithMany(s => s.Zones).HasForeignKey(z => z.SiteId);

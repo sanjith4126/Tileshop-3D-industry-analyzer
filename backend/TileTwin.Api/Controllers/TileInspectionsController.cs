@@ -2,11 +2,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using TileTwin.Api.Services;
+using TileTwin.Api.Security;
 using TileTwin.Domain;
 
 namespace TileTwin.Api.Controllers;
 
-[ApiController, Route("api/tile-inspections")]
+[ApiController, Route("api/tile-inspections"), RequirePermission(Permissions.TilesView)]
 public class TileInspectionsController(TileInspectionService tiles) : ControllerBase
 {
     [HttpGet("status")]
@@ -23,7 +24,7 @@ public class TileInspectionsController(TileInspectionService tiles) : Controller
         await tiles.ImageAsync(id, ct) is { } img ? PhysicalFile(img.Path, img.ContentType) : NotFound();
 
     /// <summary>Upload a JPEG/PNG (max 10 MB, validated by content). Inspector, MaintenanceEngineer or Admin.</summary>
-    [HttpPost, Authorize(Roles = $"{Roles.Inspector},{Roles.MaintenanceEngineer},{Roles.Admin}")]
+    [HttpPost, RequirePermission(Permissions.TilesInspect)]
     [EnableRateLimiting("upload"), RequestSizeLimit(TileInspectionService.MaxBytes + 64 * 1024)]
     public async Task<IActionResult> Upload(IFormFile? file, CancellationToken ct)
     {

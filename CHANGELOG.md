@@ -27,6 +27,16 @@ no versioned releases yet, so changes collect under Unreleased. Slice and row ID
   window (`fromUtc`, `toUtc`). The banner, badges, chart captions and the header and footer of every PDF page say
   "SYNTHETIC DEMO DATA".
 
+- **Roles renamed** (S04, decision D1; 12-14). Viewer → **PlantManager**, Admin → **Administrator**; the DEV ONLY
+  users follow (`dev.plantmanager@…`, `dev.administrator@…`). Data-rewriting migration
+  `RenameRolesAndAddPermissions` — back up before upgrading (README, "Upgrading an existing database").
+- **Permissions follow Appendix B** (S04; 4-04, 12-12, 12-15, B-05 … B-07). Endpoints require named permissions,
+  resolved from a seeded `RolePermissions` table (read-only list in Administration). Behaviour changes for users:
+  inspectors no longer acknowledge alerts, upload Knowledge Centre documents, run scoring or see anomaly scores and
+  maintenance records; plant managers now acknowledge and resolve alerts, manage documents and assign
+  observations; the machine-state update needs `maintenance.manage`. Login and refresh responses list the user's
+  permissions; the assistant offers only the tools the user's permissions allow.
+
 ### Deprecated
 
 - `POST /api/auth/login` and `GET /api/auth/me` (S03): aliases of the `/api/v1/auth/...` routes, answered with a
@@ -34,6 +44,9 @@ no versioned releases yet, so changes collect under Unreleased. Slice and row ID
 
 ### Removed
 
+- Anonymous access (S04; 12-13, B-01, B-04, B-14, B-15). Every endpoint except sign-in and `/api/health` needs a
+  signed-in user, including report PDFs, images and the 3D asset files; the app opens on a sign-in screen.
+  `/api/health` no longer returns the demo-data batch, feature flags or the ML service URL.
 - The assistant's `create_report_draft` tool (S02; 2-15). The assistant only reads; it points users to the Reports
   screen instead. Its tool list is now an allowlist checked by a test.
 - `containsSyntheticData` on inspection summaries and report documents (S01), replaced by `dataClassification`.

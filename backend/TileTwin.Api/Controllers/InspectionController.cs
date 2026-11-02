@@ -2,11 +2,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TileTwin.Api.Dtos;
 using TileTwin.Api.Services;
+using TileTwin.Api.Security;
 using TileTwin.Domain;
 
 namespace TileTwin.Api.Controllers;
 
-[ApiController, Route("api")]
+[ApiController, Route("api"), RequirePermission(Permissions.InspectionsView)]
 public class InspectionController(InspectionService inspections) : ControllerBase
 {
     [HttpGet("inspection/zones")]
@@ -21,7 +22,7 @@ public class InspectionController(InspectionService inspections) : ControllerBas
     public async Task<IActionResult> Get(Guid id, CancellationToken ct) =>
         await inspections.GetAsync(id, ct) is { } o ? Ok(o) : NotFound();
 
-    [HttpPatch("observations/{id:guid}"), Authorize(Roles = $"{Roles.Inspector},{Roles.Admin}")]
+    [HttpPatch("observations/{id:guid}"), RequirePermission(Permissions.InspectionsPerform, Permissions.InspectionsManage)]
     public async Task<IActionResult> Update(Guid id, UpdateObservationRequest req, CancellationToken ct)
     {
         if (req.AssignedRole is { Length: > 0 } r && !Roles.All.Contains(r))

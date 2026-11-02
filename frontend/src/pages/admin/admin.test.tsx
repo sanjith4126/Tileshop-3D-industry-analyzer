@@ -1,6 +1,6 @@
 import { screen } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
-import { mockApi, renderWithProviders } from '../../test-utils'
+import { mockApi, renderWithProviders, sessionAs } from '../../test-utils'
 import OverviewPage from '../OverviewPage'
 import type { Overview } from '../OverviewData'
 import AdminPage from './AdminPage'
@@ -17,17 +17,29 @@ const overview: Overview = {
   },
 }
 
-it('signed-out admin page shows configuration status but no admin actions', async () => {
-  mockApi({ '/api/overview': overview, '/api/admin/simulator': { paused: false, anchorUtc: null, lastReadingUtc: null } })
+it('shows configuration status but no admin actions to a role without them', async () => {
+  mockApi({ '/api/overview': overview, '/api/v1/auth/refresh': sessionAs('PlantManager') })
   renderWithProviders(<AdminPage />)
   expect(await screen.findByText('AI NOT CONFIGURED')).toBeInTheDocument()
   expect(screen.getByText('MODEL NOT CONFIGURED')).toBeInTheDocument()
-  expect(screen.getByText(/Sign in as Admin/)).toBeInTheDocument()
+  expect(await screen.findByText(/Only an Administrator controls the simulator/)).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Reset demo data' })).not.toBeInTheDocument()
+  expect(screen.queryByText(/Roles and permissions/)).not.toBeInTheDocument()
+})
+
+it('shows the role → permission mapping read-only to an administrator', async () => {
+  mockApi({
+    '/api/overview': overview, '/api/v1/auth/refresh': sessionAs('Administrator'),
+    '/api/admin/simulator': { paused: false, anchorUtc: null, lastReadingUtc: null }, '/api/admin/users': [], '/api/admin/audit': [],
+    '/api/admin/roles': [{ role: 'Inspector', permissions: [{ name: 'inspections.perform', capability: 'Perform inspections, record findings, upload evidence', isExtension: false }] }],
+  })
+  renderWithProviders(<AdminPage />)
+  expect(await screen.findByText('inspections.perform')).toBeInTheDocument()
+  expect(screen.getByText(/Changing this mapping is a database migration/)).toBeInTheDocument()
 })
 
 it('overview shows alert, observation and latest-anomaly indicators', async () => {
-  mockApi({ '/api/overview': overview, '/api/machines': [] })
+  mockApi({ '/api/overview': overview, '/api/machines': [], '/api/v1/auth/refresh': sessionAs('PlantManager') })
   renderWithProviders(<OverviewPage />)
   expect(await screen.findByText('MACHINE-HP-002')).toBeInTheDocument()
   expect(screen.getByText('1 critical · 2 warning')).toBeInTheDocument()

@@ -45,7 +45,7 @@ public class AuthTests(ApiFactory factory)
     async Task<string> CreateUser(string role)
     {
         var admin = Client();
-        admin.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(admin, Roles.Admin));
+        admin.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(admin, Roles.Administrator));
         var email = $"auth-test-{Guid.NewGuid():N}@tiletwin.local";
         (await admin.PostAsJsonAsync("/api/admin/users", new CreateUserRequest(email, "Auth test", role, Strong), Json)).EnsureSuccessStatusCode();
         return email;
@@ -81,7 +81,7 @@ public class AuthTests(ApiFactory factory)
     [Fact]
     public async Task Old_login_route_still_works_and_is_marked_deprecated()
     {
-        var res = await Client().PostAsJsonAsync("/api/auth/login", new LoginRequest("dev.viewer@tiletwin.local", ApiFactory.TestPassword), Json);
+        var res = await Client().PostAsJsonAsync("/api/auth/login", new LoginRequest("dev.plantmanager@tiletwin.local", ApiFactory.TestPassword), Json);
         res.EnsureSuccessStatusCode();
         Assert.True(res.Headers.Contains("Deprecation"));
         Assert.Contains("/api/v1/auth/login", res.Headers.GetValues("Link").Single());
@@ -111,7 +111,7 @@ public class AuthTests(ApiFactory factory)
     public async Task Logout_revokes_the_session()
     {
         var client = Client();
-        var (_, cookie) = await SignIn(client, "dev.viewer@tiletwin.local", ApiFactory.TestPassword);
+        var (_, cookie) = await SignIn(client, "dev.plantmanager@tiletwin.local", ApiFactory.TestPassword);
         var logout = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout");
         logout.Headers.Add("Cookie", $"tiletwin_refresh={cookie}");
 
@@ -133,7 +133,7 @@ public class AuthTests(ApiFactory factory)
             Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/v1/auth/me")).StatusCode);
 
             var admin = Client();
-            admin.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(admin, Roles.Admin));
+            admin.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(admin, Roles.Administrator));
             var id = (await admin.GetFromJsonAsync<List<UserDto>>("/api/admin/users", Json))!.Single(u => u.Email == email).Id;
             (await admin.PutAsJsonAsync($"/api/admin/users/{id}", new UpdateUserRequest(Roles.Inspector, true), Json)).EnsureSuccessStatusCode();
 
@@ -149,7 +149,7 @@ public class AuthTests(ApiFactory factory)
     [Fact]
     public async Task Five_failures_lock_the_account_for_15_minutes()
     {
-        var email = await CreateUser(Roles.Viewer);
+        var email = await CreateUser(Roles.PlantManager);
         try
         {
             var client = Client();
@@ -171,9 +171,9 @@ public class AuthTests(ApiFactory factory)
     public async Task Common_passwords_are_rejected()
     {
         var admin = Client();
-        admin.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(admin, Roles.Admin));
+        admin.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(admin, Roles.Administrator));
         var res = await admin.PostAsJsonAsync("/api/admin/users",
-            new CreateUserRequest($"common-{Guid.NewGuid():N}@tiletwin.local", null, Roles.Viewer, "Password1234"), Json);
+            new CreateUserRequest($"common-{Guid.NewGuid():N}@tiletwin.local", null, Roles.PlantManager, "Password1234"), Json);
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
         Assert.Contains("too common", await res.Content.ReadAsStringAsync());
     }

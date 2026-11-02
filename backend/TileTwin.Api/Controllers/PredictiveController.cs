@@ -3,12 +3,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TileTwin.Api.Dtos;
 using TileTwin.Api.Services;
+using TileTwin.Api.Security;
 using TileTwin.Domain;
 using TileTwin.Infrastructure.Data;
 
 namespace TileTwin.Api.Controllers;
 
-[ApiController, Route("api")]
+[ApiController, Route("api"), RequirePermission(Permissions.AnomaliesView)]
 public class PredictiveController(PredictiveService predictive, AnomalyScoringService scoring, MlStatus ml, TileTwinDbContext db, TimeProvider clock) : ControllerBase
 {
     [HttpGet("predictive")]
@@ -18,8 +19,8 @@ public class PredictiveController(PredictiveService predictive, AnomalyScoringSe
     public async Task<IActionResult> Get(string machineId, CancellationToken ct) =>
         await predictive.GetAsync(machineId, ct) is { } p ? Ok(p) : NotFound();
 
-    /// <summary>Score one machine now. Any signed-in user (rate-limited).</summary>
-    [HttpPost("predictive/{machineId}/score"), Authorize, Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("ml")]
+    /// <summary>Score one machine now (rate-limited).</summary>
+    [HttpPost("predictive/{machineId}/score"), Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("ml")]
     public async Task<IActionResult> Score(string machineId, CancellationToken ct)
     {
         var r = await scoring.ScoreAsync(machineId, ct);

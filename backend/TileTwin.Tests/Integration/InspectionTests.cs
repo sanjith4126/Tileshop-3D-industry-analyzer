@@ -16,7 +16,7 @@ public class InspectionTests(ApiFactory factory)
     [Fact]
     public async Task Zones_list_counts_and_filters_work()
     {
-        var client = factory.CreateClient();
+        var client = await factory.SignedInClientAsync();
         var zones = (await client.GetFromJsonAsync<List<InspectionZoneDto>>("/api/inspection/zones", Json))!;
         Assert.Equal(25, zones.Sum(z => z.Total));
         Assert.True(zones.Single(z => z.Id == Glaze).OpenHighPriority >= 2);
@@ -32,7 +32,7 @@ public class InspectionTests(ApiFactory factory)
     [Fact]
     public async Task Detail_has_actions_history_and_labelled_placeholder_attachment()
     {
-        var client = factory.CreateClient();
+        var client = await factory.SignedInClientAsync();
         var obs = (await client.GetFromJsonAsync<List<ObservationSummaryDto>>("/api/observations?q=interlock", Json))!.Single();
         var d = await client.GetFromJsonAsync<ObservationDetailDto>($"/api/observations/{obs.Id}", Json);
 
@@ -46,10 +46,10 @@ public class InspectionTests(ApiFactory factory)
     }
 
     [Fact]
-    public async Task Update_requires_inspector_or_admin_and_records_history()
+    public async Task Update_requires_inspection_permissions_and_records_history()
     {
+        var obs = (await (await factory.SignedInClientAsync()).GetFromJsonAsync<List<ObservationSummaryDto>>("/api/observations?q=sump", Json))!.Single();
         var client = factory.CreateClient();
-        var obs = (await client.GetFromJsonAsync<List<ObservationSummaryDto>>("/api/observations?q=sump", Json))!.Single();
         // Values differ from the current state on every run (the test DB keeps user-created history between runs).
         var newStatus = obs.Status == ObservationStatus.InProgress ? ObservationStatus.Open : ObservationStatus.InProgress;
         var assignee = $"engineer-{Guid.NewGuid():N}@tiletwin.local";
@@ -76,7 +76,7 @@ public class InspectionTests(ApiFactory factory)
     [Fact]
     public async Task Summary_cites_open_high_priority_glazing_items()
     {
-        var res = await factory.CreateClient().PostAsJsonAsync("/api/inspection/summary", new InspectionSummaryRequest(Glaze), Json);
+        var res = await (await factory.SignedInClientAsync()).PostAsJsonAsync("/api/inspection/summary", new InspectionSummaryRequest(Glaze), Json);
         var body = await res.Content.ReadAsStringAsync();
         var s = JsonSerializer.Deserialize<InspectionSummary>(body, Json);
 
@@ -86,6 +86,6 @@ public class InspectionTests(ApiFactory factory)
         Assert.Contains(s.OpenHighPriority[0].Code, string.Join(" ", s.Lines));
         Assert.Contains("\"dataClassification\":\"SYNTHETIC\"", body);
         Assert.Equal(HttpStatusCode.NotFound,
-            (await factory.CreateClient().PostAsJsonAsync("/api/inspection/summary", new InspectionSummaryRequest("ZONE-NOPE"), Json)).StatusCode);
+            (await (await factory.SignedInClientAsync()).PostAsJsonAsync("/api/inspection/summary", new InspectionSummaryRequest("ZONE-NOPE"), Json)).StatusCode);
     }
 }

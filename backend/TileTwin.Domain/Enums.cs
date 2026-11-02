@@ -19,13 +19,3 @@ public enum CorrectiveActionStatus { Planned, InProgress, Done, Cancelled }
 public enum AlertSeverity { Warning, Critical }
 
 public enum AlertStatus { Open, Acknowledged, Resolved }
-
-public static class Roles
-{
-    public const string Viewer = "Viewer";
-    public const string Inspector = "Inspector";
-    public const string MaintenanceEngineer = "MaintenanceEngineer";
-    public const string Admin = "Admin";
-
-    public static readonly string[] All = [Viewer, Inspector, MaintenanceEngineer, Admin];
-}

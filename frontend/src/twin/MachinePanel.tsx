@@ -81,7 +81,8 @@ export function MachinePanel({ id, onClose }: { id: string; onClose: () => void 
 
             <section>
               <h3 className="eyebrow mb-2">Recent maintenance</h3>
-              {recentMaintenance.length === 0 ? <p className="text-xs text-subtle">No maintenance records.</p> : (
+              {recentMaintenance === null ? <p className="text-xs text-subtle">Not available for your role.</p>
+                : recentMaintenance.length === 0 ? <p className="text-xs text-subtle">No maintenance records.</p> : (
                 <ol className="relative space-y-3 border-l border-line pl-4 text-xs">
                   {recentMaintenance.slice(0, 4).map((r) => (
                     <li key={r.id} className="relative">

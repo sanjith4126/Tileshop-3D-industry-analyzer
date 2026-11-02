@@ -6,12 +6,13 @@ import { apiSend } from '../../api/client'
 import { useObservation } from '../../api/hooks'
 import type { ObservationDetail, ObservationSummary } from '../../api/types'
 import { useAuth } from '../../auth/auth'
+import { AuthImage } from '../../components/AuthMedia'
 import { DemoBadge, EmptyState, ErrorState, Loading, Page, PageHeader, Panel } from '../../components/States'
 import { formatUtc } from '../../lib/status'
 import { focusEntity } from '../../store/focus'
 import { PriorityBadge } from './InspectionPage'
 
-const ROLES = ['', 'Inspector', 'MaintenanceEngineer', 'Admin', 'Viewer']
+const ROLES = ['', 'Inspector', 'MaintenanceEngineer', 'PlantManager', 'Administrator']
 
 function UpdateForm({ o }: { o: ObservationSummary }) {
   const qc = useQueryClient()
@@ -60,7 +61,7 @@ function UpdateForm({ o }: { o: ObservationSummary }) {
 export default function ObservationDetailPage() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
-  const { hasRole } = useAuth()
+  const { can } = useAuth()
   const q = useObservation(id)
 
   if (q.isPending) return <Loading label="Loading observation…" />
@@ -135,7 +136,7 @@ export default function ObservationDetailPage() {
           <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
             {attachments.map((a) => (
               <figure key={a.id} className="overflow-hidden rounded-lg border border-line bg-sunken">
-                <img src={a.url} alt={`${a.caption}${a.isPlaceholder ? ' (synthetic placeholder image, not a real photograph)' : ''}`} className="w-full" />
+                <AuthImage src={a.url} alt={`${a.caption}${a.isPlaceholder ? ' (synthetic placeholder image, not a real photograph)' : ''}`} className="aspect-[4/3] w-full" />
                 <figcaption className="flex flex-wrap items-center gap-2 px-3 py-2 text-xs text-muted">
                   {a.caption}{a.isPlaceholder && <span className="font-semibold text-warn">SYNTHETIC PLACEHOLDER</span>}
                 </figcaption>
@@ -146,8 +147,8 @@ export default function ObservationDetailPage() {
       </Panel>
 
       <Panel title="Update status / assignment" icon={<PencilLine className="size-4" />}>
-        {hasRole('Inspector', 'Admin') ? <UpdateForm key={o.updatedUtc} o={o} />
-          : <EmptyState icon={false}>Sign in as Inspector or Admin to update status or assignment.</EmptyState>}
+        {can('inspections.perform', 'inspections.manage') ? <UpdateForm key={o.updatedUtc} o={o} />
+          : <EmptyState icon={false}>Your role can view this observation but not update its status or assignment.</EmptyState>}
       </Panel>
     </Page>
   )

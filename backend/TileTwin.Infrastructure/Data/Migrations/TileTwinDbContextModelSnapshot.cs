@@ -1249,6 +1249,165 @@ namespace TileTwin.Infrastructure.Data.Migrations
                     b.ToTable("DemoState");
                 });
 
+            modelBuilder.Entity("TileTwin.Infrastructure.Data.PermissionEntry", b =>
+                {
+                    b.Property<string>("Name")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Capability")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("IsExtension")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Name");
+
+                    b.ToTable("Permissions", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Name = "plant.view",
+                            Capability = "Plant overview, dashboard and 3D twin at status level",
+                            IsExtension = false
+                        },
+                        new
+                        {
+                            Name = "machines.view",
+                            Capability = "Machine detail, readings and status history",
+                            IsExtension = false
+                        },
+                        new
+                        {
+                            Name = "plant.manage",
+                            Capability = "Manage plants, zones, machines, sensors and thresholds",
+                            IsExtension = false
+                        },
+                        new
+                        {
+                            Name = "alerts.view",
+                            Capability = "View alerts",
+                            IsExtension = false
+                        },
+                        new
+                        {
+                            Name = "alerts.acknowledge",
+                            Capability = "Acknowledge and resolve alerts",
+                            IsExtension = false
+                        },
+                        new
+                        {
+                            Name = "anomalies.view",
+                            Capability = "Anomaly scores and priority ranking",
+                            IsExtension = false
+                        },
+                        new
+                        {
+                            Name = "maintenance.view",
+                            Capability = "View maintenance records",
+                            IsExtension = false
+                        },
+                        new
+                        {
+                            Name = "maintenance.manage",
+                            Capability = "Create and update maintenance records",
+                            IsExtension = false
+                        },
+                        new
+                        {
+                            Name = "inspections.manage",
+                            Capability = "Create, assign and cancel inspections",
+                            IsExtension = false
+                        },
+                        new
+                        {
+                            Name = "inspections.perform",
+                            Capability = "Perform inspections, record findings, upload evidence",
+                            IsExtension = false
+                        },
+                        new
+                        {
+                            Name = "corrective-actions.create",
+                            Capability = "Create corrective actions from findings",
+                            IsExtension = false
+                        },
+                        new
+                        {
+                            Name = "corrective-actions.work",
+                            Capability = "Start and complete corrective actions",
+                            IsExtension = false
+                        },
+                        new
+                        {
+                            Name = "corrective-actions.verify",
+                            Capability = "Verify corrective actions",
+                            IsExtension = false
+                        },
+                        new
+                        {
+                            Name = "inspections.view",
+                            Capability = "View inspections and corrective actions",
+                            IsExtension = false
+                        },
+                        new
+                        {
+                            Name = "reports.generate",
+                            Capability = "Generate and download reports",
+                            IsExtension = false
+                        },
+                        new
+                        {
+                            Name = "assistant.use",
+                            Capability = "Use the AI assistant",
+                            IsExtension = false
+                        },
+                        new
+                        {
+                            Name = "users.manage",
+                            Capability = "Manage users, role assignments and data scope",
+                            IsExtension = false
+                        },
+                        new
+                        {
+                            Name = "simulator.control",
+                            Capability = "Control the simulator",
+                            IsExtension = false
+                        },
+                        new
+                        {
+                            Name = "audit.view",
+                            Capability = "View the audit log",
+                            IsExtension = false
+                        },
+                        new
+                        {
+                            Name = "knowledge.view",
+                            Capability = "View and search Knowledge Centre documents",
+                            IsExtension = true
+                        },
+                        new
+                        {
+                            Name = "knowledge.manage",
+                            Capability = "Upload, re-index and delete Knowledge Centre documents",
+                            IsExtension = true
+                        },
+                        new
+                        {
+                            Name = "tiles.view",
+                            Capability = "View tile quality inspections",
+                            IsExtension = true
+                        },
+                        new
+                        {
+                            Name = "tiles.inspect",
+                            Capability = "Submit tile images for quality inspection",
+                            IsExtension = true
+                        });
+                });
+
             modelBuilder.Entity("TileTwin.Infrastructure.Data.RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1293,6 +1452,349 @@ namespace TileTwin.Infrastructure.Data.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("RefreshTokens");
+                });
+
+            modelBuilder.Entity("TileTwin.Infrastructure.Data.RolePermission", b =>
+                {
+                    b.Property<string>("RoleName")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("PermissionName")
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("RoleName", "PermissionName");
+
+                    b.HasIndex("PermissionName");
+
+                    b.ToTable("RolePermissions");
+
+                    b.HasData(
+                        new
+                        {
+                            RoleName = "Administrator",
+                            PermissionName = "plant.view"
+                        },
+                        new
+                        {
+                            RoleName = "PlantManager",
+                            PermissionName = "plant.view"
+                        },
+                        new
+                        {
+                            RoleName = "MaintenanceEngineer",
+                            PermissionName = "plant.view"
+                        },
+                        new
+                        {
+                            RoleName = "Inspector",
+                            PermissionName = "plant.view"
+                        },
+                        new
+                        {
+                            RoleName = "Administrator",
+                            PermissionName = "machines.view"
+                        },
+                        new
+                        {
+                            RoleName = "PlantManager",
+                            PermissionName = "machines.view"
+                        },
+                        new
+                        {
+                            RoleName = "MaintenanceEngineer",
+                            PermissionName = "machines.view"
+                        },
+                        new
+                        {
+                            RoleName = "Inspector",
+                            PermissionName = "machines.view"
+                        },
+                        new
+                        {
+                            RoleName = "Administrator",
+                            PermissionName = "plant.manage"
+                        },
+                        new
+                        {
+                            RoleName = "Administrator",
+                            PermissionName = "alerts.view"
+                        },
+                        new
+                        {
+                            RoleName = "PlantManager",
+                            PermissionName = "alerts.view"
+                        },
+                        new
+                        {
+                            RoleName = "MaintenanceEngineer",
+                            PermissionName = "alerts.view"
+                        },
+                        new
+                        {
+                            RoleName = "Inspector",
+                            PermissionName = "alerts.view"
+                        },
+                        new
+                        {
+                            RoleName = "Administrator",
+                            PermissionName = "alerts.acknowledge"
+                        },
+                        new
+                        {
+                            RoleName = "PlantManager",
+                            PermissionName = "alerts.acknowledge"
+                        },
+                        new
+                        {
+                            RoleName = "MaintenanceEngineer",
+                            PermissionName = "alerts.acknowledge"
+                        },
+                        new
+                        {
+                            RoleName = "Administrator",
+                            PermissionName = "anomalies.view"
+                        },
+                        new
+                        {
+                            RoleName = "PlantManager",
+                            PermissionName = "anomalies.view"
+                        },
+                        new
+                        {
+                            RoleName = "MaintenanceEngineer",
+                            PermissionName = "anomalies.view"
+                        },
+                        new
+                        {
+                            RoleName = "Administrator",
+                            PermissionName = "maintenance.view"
+                        },
+                        new
+                        {
+                            RoleName = "PlantManager",
+                            PermissionName = "maintenance.view"
+                        },
+                        new
+                        {
+                            RoleName = "MaintenanceEngineer",
+                            PermissionName = "maintenance.view"
+                        },
+                        new
+                        {
+                            RoleName = "Administrator",
+                            PermissionName = "maintenance.manage"
+                        },
+                        new
+                        {
+                            RoleName = "MaintenanceEngineer",
+                            PermissionName = "maintenance.manage"
+                        },
+                        new
+                        {
+                            RoleName = "Administrator",
+                            PermissionName = "inspections.manage"
+                        },
+                        new
+                        {
+                            RoleName = "PlantManager",
+                            PermissionName = "inspections.manage"
+                        },
+                        new
+                        {
+                            RoleName = "Administrator",
+                            PermissionName = "inspections.perform"
+                        },
+                        new
+                        {
+                            RoleName = "Inspector",
+                            PermissionName = "inspections.perform"
+                        },
+                        new
+                        {
+                            RoleName = "Administrator",
+                            PermissionName = "corrective-actions.create"
+                        },
+                        new
+                        {
+                            RoleName = "PlantManager",
+                            PermissionName = "corrective-actions.create"
+                        },
+                        new
+                        {
+                            RoleName = "Inspector",
+                            PermissionName = "corrective-actions.create"
+                        },
+                        new
+                        {
+                            RoleName = "Administrator",
+                            PermissionName = "corrective-actions.work"
+                        },
+                        new
+                        {
+                            RoleName = "MaintenanceEngineer",
+                            PermissionName = "corrective-actions.work"
+                        },
+                        new
+                        {
+                            RoleName = "Administrator",
+                            PermissionName = "corrective-actions.verify"
+                        },
+                        new
+                        {
+                            RoleName = "PlantManager",
+                            PermissionName = "corrective-actions.verify"
+                        },
+                        new
+                        {
+                            RoleName = "Inspector",
+                            PermissionName = "corrective-actions.verify"
+                        },
+                        new
+                        {
+                            RoleName = "Administrator",
+                            PermissionName = "inspections.view"
+                        },
+                        new
+                        {
+                            RoleName = "PlantManager",
+                            PermissionName = "inspections.view"
+                        },
+                        new
+                        {
+                            RoleName = "MaintenanceEngineer",
+                            PermissionName = "inspections.view"
+                        },
+                        new
+                        {
+                            RoleName = "Inspector",
+                            PermissionName = "inspections.view"
+                        },
+                        new
+                        {
+                            RoleName = "Administrator",
+                            PermissionName = "reports.generate"
+                        },
+                        new
+                        {
+                            RoleName = "PlantManager",
+                            PermissionName = "reports.generate"
+                        },
+                        new
+                        {
+                            RoleName = "MaintenanceEngineer",
+                            PermissionName = "reports.generate"
+                        },
+                        new
+                        {
+                            RoleName = "Inspector",
+                            PermissionName = "reports.generate"
+                        },
+                        new
+                        {
+                            RoleName = "Administrator",
+                            PermissionName = "assistant.use"
+                        },
+                        new
+                        {
+                            RoleName = "PlantManager",
+                            PermissionName = "assistant.use"
+                        },
+                        new
+                        {
+                            RoleName = "MaintenanceEngineer",
+                            PermissionName = "assistant.use"
+                        },
+                        new
+                        {
+                            RoleName = "Inspector",
+                            PermissionName = "assistant.use"
+                        },
+                        new
+                        {
+                            RoleName = "Administrator",
+                            PermissionName = "users.manage"
+                        },
+                        new
+                        {
+                            RoleName = "Administrator",
+                            PermissionName = "simulator.control"
+                        },
+                        new
+                        {
+                            RoleName = "Administrator",
+                            PermissionName = "audit.view"
+                        },
+                        new
+                        {
+                            RoleName = "Administrator",
+                            PermissionName = "knowledge.view"
+                        },
+                        new
+                        {
+                            RoleName = "PlantManager",
+                            PermissionName = "knowledge.view"
+                        },
+                        new
+                        {
+                            RoleName = "MaintenanceEngineer",
+                            PermissionName = "knowledge.view"
+                        },
+                        new
+                        {
+                            RoleName = "Inspector",
+                            PermissionName = "knowledge.view"
+                        },
+                        new
+                        {
+                            RoleName = "Administrator",
+                            PermissionName = "knowledge.manage"
+                        },
+                        new
+                        {
+                            RoleName = "PlantManager",
+                            PermissionName = "knowledge.manage"
+                        },
+                        new
+                        {
+                            RoleName = "MaintenanceEngineer",
+                            PermissionName = "knowledge.manage"
+                        },
+                        new
+                        {
+                            RoleName = "Administrator",
+                            PermissionName = "tiles.view"
+                        },
+                        new
+                        {
+                            RoleName = "PlantManager",
+                            PermissionName = "tiles.view"
+                        },
+                        new
+                        {
+                            RoleName = "MaintenanceEngineer",
+                            PermissionName = "tiles.view"
+                        },
+                        new
+                        {
+                            RoleName = "Inspector",
+                            PermissionName = "tiles.view"
+                        },
+                        new
+                        {
+                            RoleName = "Administrator",
+                            PermissionName = "tiles.inspect"
+                        },
+                        new
+                        {
+                            RoleName = "MaintenanceEngineer",
+                            PermissionName = "tiles.inspect"
+                        },
+                        new
+                        {
+                            RoleName = "Inspector",
+                            PermissionName = "tiles.inspect"
+                        });
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -1520,6 +2022,15 @@ namespace TileTwin.Infrastructure.Data.Migrations
                     b.HasOne("TileTwin.Infrastructure.Data.AppUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TileTwin.Infrastructure.Data.RolePermission", b =>
+                {
+                    b.HasOne("TileTwin.Infrastructure.Data.PermissionEntry", null)
+                        .WithMany()
+                        .HasForeignKey("PermissionName")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

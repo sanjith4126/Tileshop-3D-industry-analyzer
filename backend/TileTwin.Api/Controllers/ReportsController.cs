@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TileTwin.Api.Reports;
+using TileTwin.Api.Security;
+using TileTwin.Domain;
 
 namespace TileTwin.Api.Controllers;
 
-[ApiController, Route("api/reports")]
+[ApiController, Route("api/reports"), RequirePermission(Permissions.ReportsGenerate)]
 public class ReportsController(ReportService reports, TimeProvider clock) : ControllerBase
 {
     [HttpGet]
@@ -15,7 +17,7 @@ public class ReportsController(ReportService reports, TimeProvider clock) : Cont
         await reports.GetAsync(id, ct) is { } r ? Ok(r) : NotFound();
 
     /// <summary>Generates and stores a report. Any signed-in role.</summary>
-    [HttpPost, Authorize, Microsoft.AspNetCore.Http.Timeouts.RequestTimeout("long")]
+    [HttpPost, Microsoft.AspNetCore.Http.Timeouts.RequestTimeout("long")]
     public async Task<IActionResult> Create(ReportRequest req, CancellationToken ct)
     {
         if (ReportService.Validate(req, clock.GetUtcNow().UtcDateTime) is { } error)

@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using TileTwin.Api.Configuration;
 using TileTwin.Api.Dtos;
+using TileTwin.Api.Security;
 using TileTwin.Infrastructure.Data;
 
 namespace TileTwin.Api.Services;
@@ -19,7 +20,8 @@ public sealed record AuthSession(LoginResponse Response, string RefreshToken, Da
 /// carry only sub, roles, jti, iat, exp, iss and aud. Refresh tokens are 256-bit random values stored as SHA-256
 /// hashes, rotated on every use, and all tokens of one sign-in (a family) expire 12 h after that sign-in.
 /// </summary>
-public class AuthService(UserManager<AppUser> users, AppConfig config, TimeProvider clock, AuditLogger audit, TileTwinDbContext db)
+public class AuthService(UserManager<AppUser> users, AppConfig config, TimeProvider clock, AuditLogger audit, TileTwinDbContext db,
+    PermissionCatalog permissions)
 {
     public static readonly TimeSpan AccessTokenLifetime = TimeSpan.FromMinutes(15);
     public static readonly TimeSpan RefreshLifetime = TimeSpan.FromHours(12);
@@ -113,7 +115,8 @@ public class AuthService(UserManager<AppUser> users, AppConfig config, TimeProvi
         var roles = (await users.GetRolesAsync(user)).ToList();
         var expires = now + AccessTokenLifetime;
         await db.SaveChangesAsync(ct);
-        return new AuthSession(new LoginResponse(AccessToken(user.Id, roles, now, expires), expires, user.Email!, user.DisplayName, roles),
+        var granted = (await permissions.ForRolesAsync(roles)).Order().ToList();
+        return new AuthSession(new LoginResponse(AccessToken(user.Id, roles, now, expires), expires, user.Email!, user.DisplayName, roles, granted),
             raw, familyExpiresUtc);
     }
 

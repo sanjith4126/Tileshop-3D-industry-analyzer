@@ -55,7 +55,8 @@ export interface MaintenanceRecord {
 export interface MachineDetail {
   machine: MachineSummary
   sensors: Sensor[]
-  recentMaintenance: MaintenanceRecord[]
+  /** null when the user's role may not view maintenance records (Appendix B). */
+  recentMaintenance: MaintenanceRecord[] | null
   generatedAt: string
   dataClassification: DataClassification
 }

@@ -11,6 +11,8 @@ export interface Session {
   email: string
   displayName: string | null
   roles: string[]
+  /** Named permissions of the user's roles (section 12.2). The UI uses them only to hide what the API would refuse. */
+  permissions: string[]
   expiresUtc: string
 }
 
@@ -102,6 +104,17 @@ export async function apiSend<T>(method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', pa
     throw new ApiError(res.status, msg)
   }
   return res.status === 204 ? (undefined as T) : ((await res.json()) as T)
+}
+
+/** Downloads a file as the signed-in user (a plain link cannot carry the access token). */
+export async function downloadFile(path: string, fileName: string) {
+  const res = await apiFetch(path)
+  if (!res.ok) throw new ApiError(res.status, res.status === 403 ? 'Your role cannot download this' : `Download failed (${res.status})`)
+  const named = /filename="?([^";]+)"?/.exec(res.headers.get('Content-Disposition') ?? '')?.[1]
+  const url = URL.createObjectURL(await res.blob())
+  const a = Object.assign(document.createElement('a'), { href: url, download: named ?? fileName })
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(url), 10_000)
 }
 
 /** Multipart upload as the signed-in user; validation messages for the file field come back as the error. */

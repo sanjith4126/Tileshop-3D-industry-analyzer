@@ -16,28 +16,28 @@ Statuses: CONFORMS · PARTIAL · MISSING · VIOLATES · NOT_APPLICABLE (Appendix
 Effort: S < ½ day, M ≤ 2 days, L more. **Slice** is assigned in Phase 4 (remediation plan); `TBD` until then.
 
 <!-- SUMMARY:BEGIN -->
-## Summary (2026-10-31)
+## Summary (2026-11-02)
 
 352 requirement rows (sections 2–22 and Appendix B).
 
 | Status | Rows | Share |
 |---|---:|---:|
-| CONFORMS | 73 | 21 % |
-| PARTIAL | 182 | 52 % |
-| MISSING | 70 | 20 % |
-| VIOLATES | 27 | 8 % |
+| CONFORMS | 80 | 23 % |
+| PARTIAL | 185 | 53 % |
+| MISSING | 68 | 19 % |
+| VIOLATES | 19 | 5 % |
 | NOT_APPLICABLE | 0 | 0 % |
 
 Open rows (everything not CONFORMS) by priority:
 
 | Priority | Meaning | PARTIAL | MISSING | VIOLATES | Total |
 |---|---|---:|---:|---:|---:|
-| P0 | data honesty, security, licences | 14 | 7 | 11 | 32 |
+| P0 | data honesty, security, licences | 17 | 5 | 3 | 25 |
 | P1 | policy correctness, data integrity, backend authority | 47 | 30 | 8 | 85 |
 | P2 | architecture, API, observability, performance, degraded modes | 68 | 22 | 5 | 95 |
 | P3 | design system, accessibility, UX, 3D twin | 38 | 1 | 3 | 42 |
 | P4 | documentation, ADRs, demo script | 15 | 10 | 0 | 25 |
-| **All** | | 182 | 70 | 27 | **279** |
+| **All** | | 185 | 68 | 19 | **272** |
 <!-- SUMMARY:END -->
 
 Counts at the baseline and now are identical, because Phase 2 changes no application code. Regenerate this block
@@ -124,7 +124,7 @@ destructive migrations, changing how the demo is accessed). The plan cannot be f
 | 4-01 | React, TypeScript strict, Vite, Tailwind, Three.js/R3F/Drei, TanStack Query, React Router, Recharts | CONFORMS | `frontend/package.json`; strict mode proven by a probe file failing with TS7006 under `tsconfig.app.json` (2026-10-30) | — | — | — | — |
 | 4-02 | Zustand for shared UI state; React Hook Form + Zod for forms | PARTIAL | `frontend/src/store/focus.ts` custom store; forms hand-validated, no Zod | Different/no libraries; keep with ADR or adopt | P3 | M | S29 |
 | 4-03 | ASP.NET Core .NET 10, EF Core + Npgsql, JWT bearer | CONFORMS | csproj versions in BASELINE §2, §8 | — | — | — | — |
-| 4-04 | Policy-based authorisation | MISSING | `Program.cs:47` `AddAuthorization()` without policies; role-name attributes e.g. `AlertsController.cs:20` | — | P0 | M | S04 |
+| 4-04 | Policy-based authorisation | CONFORMS | Policy-based: `[RequirePermission]` builds `perm:` policies (`backend/TileTwin.Api/Security/Authorization.cs`), fallback policy requires a signed-in user (`Program.cs`) (S04) | — | — | — | S04 |
 | 4-05 | FluentValidation | PARTIAL | DataAnnotations: `UserAdminService.cs:11-17`, `AssistantService.cs:10-12` | Different library; meets intent partly (ADR or migrate) | P2 | M | S21 |
 | 4-06 | OpenAPI via Microsoft.AspNetCore.OpenApi; Swagger UI outside Production only | PARTIAL | `Program.cs:118,124-129` UI mapped in every environment; probe §4 `/swagger/index.html` 200 | Swagger UI not environment-gated | P2 | S | S27 |
 | 4-07 | Serilog | MISSING | No Serilog package (BASELINE §8) | — | P2 | M | S24 |
@@ -323,13 +323,13 @@ destructive migrations, changing how the demo is accessed). The plan cannot be f
 | 12-09 | Rotating refresh tokens (hashed, reuse detection, 12 h) in an HttpOnly Secure SameSite=Strict cookie; access token in memory only | CONFORMS | `RefreshTokens` table (migration `AddRefreshTokens`): 256-bit values stored as SHA-256, rotated atomically, reuse revokes the family, 12 h per sign-in; cookie HttpOnly, Secure, SameSite=Strict, Path `/api/v1/auth`; SPA keeps the access token in memory with single-flight refresh across tabs (`frontend/src/api/client.ts`); tests `AuthTests.Refresh_rotates_and_reusing_an_old_token_ends_the_session`, `client.test.ts`, Playwright `the session survives a reload…` (S03) | — | — | — | S03 |
 | 12-10 | Deactivation revokes refresh tokens; per-request active-user check (≤ 60 s cache) | CONFORMS | `UserAdminService.UpdateAsync` revokes all refresh tokens on deactivation; `ActiveUsers` per-request check (60 s cache, evicted on change) in `JwtBearerEvents.OnTokenValidated`; test `AuthTests.Deactivating_a_user_blocks_their_token_and_refresh_at_once` (S03) | — | — | — | S03 |
 | 12-11 | Logout revokes the token family | CONFORMS | `POST /api/v1/auth/logout` revokes the family and clears the cookie; tests `AuthTests.Logout_revokes_the_session`, Playwright sign-out (S03) | — | — | — | S03 |
-| 12-12 | Endpoints require named permissions; no role-name checks in business code | VIOLATES | Role-name attributes, e.g. `AlertsController.cs:20,23`, `InspectionController.cs:24` | — | P0 | M | S04 |
-| 12-13 | No endpoint is open without authentication (Appendix B grants no anonymous access) | VIOLATES | Probe §1: anonymous 200 on `/api/machines`, `/api/alerts`, `/api/observations`, `/api/reports`, `/api/workflows/executions`, `/api/overview`, report PDF | D6 | P0 | M | S04 |
-| 12-14 | Four roles: Administrator, Plant Manager, Maintenance Engineer, Inspector | PARTIAL | `Enums.cs:23-31` Viewer, Inspector, MaintenanceEngineer, Admin | D1 | P0 | M | S04 |
-| 12-15 | Roles and permissions from seed data, read-only in the admin UI | PARTIAL | Roles seeded (`IdentitySeeder.SeedRolesAsync`) | No permissions | P0 | M | S04 |
+| 12-12 | Endpoints require named permissions; no role-name checks in business code | CONFORMS | Endpoints name permissions, never roles; test `PermissionMatrixTests.Only_sign_in_and_health_are_public_and_every_other_endpoint_names_a_permission` also fails on any `Authorize(Roles = …)` (S04) | — | — | — | S04 |
+| 12-13 | No endpoint is open without authentication (Appendix B grants no anonymous access) | CONFORMS | Only sign-in, refresh, logout and `/api/health` are anonymous; `/assets3d` sits behind the fallback policy; test `PermissionMatrixTests.Every_endpoint_refuses_anonymous_callers_and_roles_without_its_permission` calls every routed endpoint anonymously (401) (S04) | — | — | — | S04 |
+| 12-14 | Four roles: Administrator, Plant Manager, Maintenance Engineer, Inspector | CONFORMS | `Roles`: Administrator, PlantManager, MaintenanceEngineer, Inspector (`backend/TileTwin.Domain/Security/AccessControl.cs`); migration `RenameRolesAndAddPermissions` renamed existing roles and DEV ONLY users (backup taken first) (S04) | — | — | — | S04 |
+| 12-15 | Roles and permissions from seed data, read-only in the admin UI | CONFORMS | `Permissions` and `RolePermissions` seeded by migration from `Permissions.All`; read at run time by `PermissionCatalog`; `GET /api/admin/roles` and the read-only "Roles and permissions" panel in Administration (S04) | — | — | — | S04 |
 | 12-16 | One `IAccessScope` scopes data; out-of-scope records → 404 | MISSING | — | — | P0 | L | S05 |
 | 12-17 | The same scope for assistant, reports, notifications, SignalR and downloads | MISSING | — | — | P0 | M | S05 |
-| 12-18 | Authorisation tests generated from Appendix B | MISSING | Role tests exist for some writes (`Write_endpoint_enforces_roles`) | No matrix | P0 | M | S04 |
+| 12-18 | Authorisation tests generated from Appendix B | CONFORMS | `PermissionMatrixTests` parses Appendix B from `docs/MASTER_PROMPT.md`, checks it against the catalogue and the seeded table, and calls every endpoint of the live routing table anonymously and as each role (S04) | — | — | — | S04 |
 | 12-19 | SECURITY.md recommends separating administration from operations | MISSING | No SECURITY.md | — | P4 | S | S33 |
 | 12-20 | Every request validated server-side (FluentValidation); client mirror for usability | PARTIAL | DataAnnotations on DTOs (see 4-05) | — | P2 | M | S21 |
 | 12-21 | Parameterised SQL only | CONFORMS | All raw SQL uses `SqlQuery<T>($"…")` (`MachineService.cs:71`, `ReadingsService.cs:29`, `AnomalyScoringService.cs:44`, `KnowledgeService.cs:134,143`); no `*Raw` APIs (grep) | — | — | — | — |
@@ -481,7 +481,7 @@ destructive migrations, changing how the demo is accessed). The plan cannot be f
 | 20-06 | Priority, KPI and simulator determinism tests | PARTIAL | `PrioritisationTests.cs` (5); `Reset_preserves_user_created_rows_and_is_deterministic` | No live-simulator determinism or KPI tests | P1 | S | S13 |
 | 20-07 | Integration tests on real PostgreSQL via Testcontainers; never in-memory | PARTIAL | Real Postgres DB `tiletwin_test` (`ApiFactory.cs:30-32`) ✓; not Testcontainers | — | P2 | S | S27 |
 | 20-08 | Migrations on empty DB, seeder idempotent, constraints under concurrency, RESTRICT, xmin 409, ingestion idempotency, retention, keyset pagination | PARTIAL | `DemoSeederTests.cs` ✓ | Most cases missing | P1 | M | S20 |
-| 20-09 | API tests: login, lockout, refresh rotation/reuse, deactivated users, role matrix, scope leaks, Problem Details, report auth, upload rejection | PARTIAL | `Login_with_wrong_password_is_rejected`, `Login_is_rate_limited_per_client`, `Admin_creates_user_who_can_sign_in_then_disables_them`, `Disguised_and_oversized_files_are_rejected`, `Creating_a_report_requires_sign_in` | Lockout, refresh, matrix, scope, download auth missing | P0 | M | S04 |
+| 20-09 | API tests: login, lockout, refresh rotation/reuse, deactivated users, role matrix, scope leaks, Problem Details, report auth, upload rejection | PARTIAL | Login, lockout, refresh rotation and reuse, logout, deactivated users (`AuthTests`), the Appendix B role matrix (`PermissionMatrixTests`), report auth and upload rejection (existing tests) (S03, S04) | Scope-leak tests (S05) and Problem Details tests (S23) | P0 | M | S23 |
 | 20-10 | Architecture tests | MISSING | See 5-12 | — | P2 | S | S21 |
 | 20-11 | Frontend: both themes, validation, states, permission nav, theme persistence, stale never NORMAL, chart gaps, server values, twin selection | PARTIAL | 17 tests in 9 files (e.g. `shell.test.tsx`, `monitoring.test.tsx`, `predictive.test.tsx`) | Themes, permissions, gaps, persistence missing | P2 | M | S28 |
 | 20-12 | ML tests incl. corrupt/missing model, 503, contract test against the backend client | PARTIAL | `ml-service/tests` 16 tests (`test_ml.py`, `test_tile.py`, `test_health.py`) | No 503 or contract test | P2 | M | S14 |
@@ -520,21 +520,21 @@ Current reality: read endpoints are anonymous; writes use the roles `Viewer`, `I
 
 | ID | Capability (target) | Status | Evidence | Gap | Priority | Effort | Slice |
 |---|---|---|---|---|---|---|---|
-| B-01 | Plant overview, dashboard and twin at status level — all roles | PARTIAL | Probe §1: also open to anonymous users | Anonymous access | P0 | S | S04 |
+| B-01 | Plant overview, dashboard and twin at status level — all roles | CONFORMS | `plant.view` for all four roles; anonymous callers get 401 (matrix test) (S04) | — | — | — | S04 |
 | B-02 | Machine detail, readings, history — Admin/PM all; ME/Inspector assigned | VIOLATES | Probe §1: anonymous 200 on `/api/machines` | No authentication or scope | P0 | M | S05 |
 | B-03 | Manage plants, zones, machines, sensors, thresholds — Administrator only | PARTIAL | Only `PUT /api/machines/{id}/state` (MaintenanceEngineer, Admin — `Controllers.cs:84`) | ME may change machine state; no threshold management | P1 | M | S09 |
-| B-04 | View alerts — Admin/PM all; ME/Inspector assigned | VIOLATES | Probe §1: anonymous 200 on `/api/alerts` | — | P0 | M | S04 |
-| B-05 | Acknowledge and resolve alerts — Admin/PM all; ME assigned; Inspector none | VIOLATES | `AlertsController.cs:20` Inspector may acknowledge | — | P0 | S | S04 |
-| B-06 | Anomaly scores and ranking — Admin/PM all; ME assigned; Inspector none | VIOLATES | `/api/predictive` anonymous; any signed-in user can score (`PredictiveController.cs:21`) | — | P0 | S | S04 |
-| B-07 | View maintenance records — Admin/PM all; ME assigned; Inspector none | VIOLATES | Machine detail (with maintenance) is anonymous | — | P0 | S | S04 |
+| B-04 | View alerts — Admin/PM all; ME/Inspector assigned | PARTIAL | `alerts.view` for all roles, no anonymous access (S04) | Engineers and inspectors see all alerts, not only their assigned machines (access scope) | P0 | M | S05 |
+| B-05 | Acknowledge and resolve alerts — Admin/PM all; ME assigned; Inspector none | PARTIAL | `alerts.acknowledge`: Administrator, Plant Manager, Maintenance Engineer; inspectors get 403 (S04, `MonitoringTests`) | Engineers may act on any machine, not only assigned ones (access scope) | P0 | S | S05 |
+| B-06 | Anomaly scores and ranking — Admin/PM all; ME assigned; Inspector none | PARTIAL | `anomalies.view`: Administrator, Plant Manager, Maintenance Engineer; inspectors get 403 and no score on the overview (S04) | Engineers see every machine's scores, not only assigned ones (access scope) | P0 | S | S05 |
+| B-07 | View maintenance records — Admin/PM all; ME assigned; Inspector none | PARTIAL | `maintenance.view`: Administrator, Plant Manager, Maintenance Engineer; machine detail omits maintenance for inspectors (`ApiTests.Inspectors_see_machine_detail_without_maintenance_records`) (S04) | Engineers see all machines' records, not only assigned ones (access scope) | P0 | S | S05 |
 | B-08 | Create and update maintenance records — Admin; ME assigned | MISSING | No endpoint | — | P1 | M | S18 |
 | B-09 | Create, assign, cancel inspections — Admin, PM | PARTIAL | Observation assignment by Inspector/Admin (`InspectionController.cs:24`); no create | — | P1 | M | S16 |
 | B-10 | Perform inspections, findings, evidence — Admin; Inspector own assignments | PARTIAL | Observation status updates by Inspector/Admin; no perform flow | — | P1 | M | S16 |
 | B-11 | Create corrective actions from findings — Admin, PM; Inspector own findings | MISSING | — | — | P1 | M | S17 |
 | B-12 | Start and complete corrective actions — Admin; ME assigned to them | MISSING | — | — | P1 | M | S17 |
 | B-13 | Verify corrective actions — Admin, PM; Inspector ones raised unless completed | MISSING | — | — | P1 | M | S17 |
-| B-14 | View inspections and corrective actions — Admin/PM all; ME linked; Inspector assigned zones | VIOLATES | Probe §1: anonymous 200 on `/api/observations` | — | P0 | M | S04 |
-| B-15 | Generate and download reports — all roles within scope | VIOLATES | Generation needs sign-in ✓; download anonymous (17-04) | — | P0 | S | S04 |
+| B-14 | View inspections and corrective actions — Admin/PM all; ME linked; Inspector assigned zones | PARTIAL | `inspections.view` for all roles, no anonymous access (S04) | No restriction to linked machines (engineers) or assigned zones (inspectors) yet (access scope) | P0 | M | S05 |
+| B-15 | Generate and download reports — all roles within scope | PARTIAL | `reports.generate` for all roles; PDF download needs sign-in (S04) | Reports are not limited to the user's scope (access scope) | P0 | S | S05 |
 | B-16 | Use the AI assistant — all roles within scope | PARTIAL | Any signed-in user (`AssistantController.cs`) ✓; no scope | — | P0 | M | S05 |
 | B-17 | Manage users, role assignments and data scope — Administrator | PARTIAL | `AdminController.cs:14` Admin only ✓ | No scope assignments | P1 | M | S05 |
 | B-18 | Control the simulator — Administrator | CONFORMS | `AlertsController.cs:51` `PUT /api/admin/simulator` Admin only, audited | — | — | — | — |

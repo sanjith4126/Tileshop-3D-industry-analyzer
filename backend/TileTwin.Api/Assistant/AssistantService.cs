@@ -37,11 +37,11 @@ public partial class AssistantService(ILlmProvider llm, AssistantTools tools, Au
     [GeneratedRegex(@"\b(?:MACHINE|ZONE)-[A-Z0-9]+(?:-[A-Z0-9]+)*\b")]
     private static partial Regex EntityIdPattern();
 
-    public async Task<ChatResponse> ChatAsync(ChatRequest req, string user, CancellationToken ct)
+    public async Task<ChatResponse> ChatAsync(ChatRequest req, string user, IReadOnlySet<string> permissions, CancellationToken ct)
     {
         var history = req.Messages.Select(m => new ChatTurn(m.Role, m.Text)).ToList();
-        var result = await llm.RunAsync(SystemPrompt, history, AssistantTools.Definitions,
-            (name, input, token) => ExecuteToolAsync(name, input, user, token), MaxToolCalls, ct);
+        var result = await llm.RunAsync(SystemPrompt, history, AssistantTools.For(permissions),
+            (name, input, token) => ExecuteToolAsync(name, input, user, permissions, token), MaxToolCalls, ct);
 
         audit.Add(user, "assistant.chat", null, new { question = history[^1].Text, toolCalls = result.ToolCalls.Count, result.StopReason });
         await db.SaveChangesAsync(ct);
@@ -53,13 +53,13 @@ public partial class AssistantService(ILlmProvider llm, AssistantTools tools, Au
         return new ChatResponse(result.Text, result.ToolCalls, mentioned.Where(known.Contains).ToList(), result.ToolLimitReached, Disclaimer);
     }
 
-    async Task<(string, bool)> ExecuteToolAsync(string name, System.Text.Json.JsonElement input, string user, CancellationToken ct)
+    async Task<(string, bool)> ExecuteToolAsync(string name, System.Text.Json.JsonElement input, string user, IReadOnlySet<string> permissions, CancellationToken ct)
     {
         string output;
         bool isError;
         try
         {
-            output = AssistantTools.Serialize(await tools.ExecuteAsync(name, new ToolArgs(input), ct));
+            output = AssistantTools.Serialize(await tools.ExecuteAsync(name, new ToolArgs(input), permissions, ct));
             isError = false;
         }
         catch (ToolArgumentException ex)

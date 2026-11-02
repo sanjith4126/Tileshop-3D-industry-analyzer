@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TileTwin.Api.Dtos;
 using TileTwin.Api.Services;
+using TileTwin.Api.Security;
 using TileTwin.Domain;
 using TileTwin.Infrastructure.Data;
 using TileTwin.Infrastructure.Seeding;
@@ -13,14 +14,14 @@ namespace TileTwin.Api.Controllers;
 public class AlertsController(AlertService alerts) : ControllerBase
 {
     /// <summary>Threshold alerts. Without <c>status</c> returns all not-resolved alerts.</summary>
-    [HttpGet]
+    [HttpGet, RequirePermission(Permissions.AlertsView)]
     public Task<List<AlertDto>> List([FromQuery] string? machineId, [FromQuery] AlertStatus? status, [FromQuery] int limit = 100, CancellationToken ct = default) =>
         alerts.ListAsync(machineId, status, limit, ct);
 
-    [HttpPost("{id:guid}/acknowledge"), Authorize(Roles = $"{Roles.Inspector},{Roles.MaintenanceEngineer},{Roles.Admin}")]
+    [HttpPost("{id:guid}/acknowledge"), RequirePermission(Permissions.AlertsAcknowledge)]
     public Task<IActionResult> Acknowledge(Guid id, AlertActionRequest req, CancellationToken ct) => Apply(id, AlertStatus.Acknowledged, req, ct);
 
-    [HttpPost("{id:guid}/resolve"), Authorize(Roles = $"{Roles.MaintenanceEngineer},{Roles.Admin}")]
+    [HttpPost("{id:guid}/resolve"), RequirePermission(Permissions.AlertsAcknowledge)]
     public Task<IActionResult> Resolve(Guid id, AlertActionRequest req, CancellationToken ct) => Apply(id, AlertStatus.Resolved, req, ct);
 
     async Task<IActionResult> Apply(Guid id, AlertStatus status, AlertActionRequest req, CancellationToken ct)
@@ -35,7 +36,7 @@ public class AlertsController(AlertService alerts) : ControllerBase
     }
 }
 
-[ApiController, Route("api/admin/simulator")]
+[ApiController, Route("api/admin/simulator"), RequirePermission(Permissions.SimulatorControl)]
 public class SimulatorController(TileTwinDbContext db, AuditLogger audit) : ControllerBase
 {
     [HttpGet]
@@ -48,7 +49,7 @@ public class SimulatorController(TileTwinDbContext db, AuditLogger audit) : Cont
         return Ok(new SimulatorStateDto(state?.SimulatorPaused ?? false, state?.AnchorUtc, last));
     }
 
-    [HttpPut, Authorize(Roles = Roles.Admin)]
+    [HttpPut]
     public async Task<IActionResult> Put(SimulatorUpdateRequest req, CancellationToken ct)
     {
         var state = await db.DemoState.SingleOrDefaultAsync(ct);

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { DatabaseZap, Pause, Play, ScrollText, Settings2, ShieldCheck, TriangleAlert, UserPlus, Users as UsersIcon } from 'lucide-react'
+import { DatabaseZap, KeyRound, Pause, Play, ScrollText, Settings2, ShieldCheck, TriangleAlert, UserPlus, Users as UsersIcon } from 'lucide-react'
 import { useState } from 'react'
 import { apiGet, apiSend } from '../../api/client'
 import { useAuth } from '../../auth/auth'
@@ -7,17 +7,17 @@ import { EmptyState, ErrorState, Loading, Page, PageHeader, Panel } from '../../
 import { formatUtc } from '../../lib/status'
 import { ConfigStatus, useOverview } from '../OverviewData'
 
-const ROLES = ['Viewer', 'Inspector', 'MaintenanceEngineer', 'Admin']
+const ROLES = ['Administrator', 'PlantManager', 'MaintenanceEngineer', 'Inspector']
 interface User { id: string; email: string; displayName: string | null; roles: string[]; disabled: boolean }
 interface AuditEntry { id: string; timestampUtc: string; userName: string | null; action: string; entityId: string | null; detailsJson: string | null }
 
 function Users({ self }: { self: string }) {
   const qc = useQueryClient()
   const users = useQuery({ queryKey: ['admin-users'], queryFn: () => apiGet<User[]>('/api/admin/users') })
-  const [form, setForm] = useState({ email: '', displayName: '', role: 'Viewer', password: '' })
+  const [form, setForm] = useState({ email: '', displayName: '', role: 'PlantManager', password: '' })
   const create = useMutation({
     mutationFn: () => apiSend<User>('POST', '/api/admin/users', form),
-    onSuccess: () => { setForm({ email: '', displayName: '', role: 'Viewer', password: '' }); qc.invalidateQueries({ queryKey: ['admin-users'] }) },
+    onSuccess: () => { setForm({ email: '', displayName: '', role: 'PlantManager', password: '' }); qc.invalidateQueries({ queryKey: ['admin-users'] }) },
   })
   const update = useMutation({
     mutationFn: (u: { id: string; role: string; disabled: boolean }) => apiSend<User>('PUT', `/api/admin/users/${u.id}`, { role: u.role, disabled: u.disabled }),
@@ -38,13 +38,13 @@ function Users({ self }: { self: string }) {
                   </span>
                 </td>
                 <td>
-                  <select aria-label={`Role of ${u.email}`} value={u.roles[0] ?? 'Viewer'} disabled={u.email === self || update.isPending}
+                  <select aria-label={`Role of ${u.email}`} value={u.roles[0] ?? 'PlantManager'} disabled={u.email === self || update.isPending}
                     onChange={(e) => update.mutate({ id: u.id, role: e.target.value, disabled: u.disabled })} className="input input-sm w-48">
                     {ROLES.map((r) => <option key={r}>{r}</option>)}
                   </select>
                 </td>
                 <td>
-                  <button disabled={u.email === self || update.isPending} onClick={() => update.mutate({ id: u.id, role: u.roles[0] ?? 'Viewer', disabled: !u.disabled })}
+                  <button disabled={u.email === self || update.isPending} onClick={() => update.mutate({ id: u.id, role: u.roles[0] ?? 'PlantManager', disabled: !u.disabled })}
                     className={`btn btn-sm ${u.disabled ? 'btn-danger' : 'btn-secondary'}`}>{u.disabled ? 'Disabled — enable' : 'Active — disable'}</button>
                 </td>
               </tr>
@@ -66,12 +66,37 @@ function Users({ self }: { self: string }) {
   )
 }
 
+interface RoleEntry { role: string; permissions: { name: string; capability: string; isExtension: boolean }[] }
+
+/** The role → permission mapping, read-only: it is seed data and changes only by migration (section 12.2). */
+function RolesAndPermissions() {
+  const q = useQuery({ queryKey: ['admin-roles'], queryFn: ({ signal }) => apiGet<RoleEntry[]>('/api/admin/roles', signal) })
+  return (
+    <Panel title="Roles and permissions · read-only" icon={<KeyRound className="size-4" />} className="overflow-x-auto">
+      {q.isPending ? <Loading /> : q.isError ? <ErrorState error={q.error} /> : (
+        <table className="data-table text-xs">
+          <thead><tr><th>Role</th><th>Permissions</th></tr></thead>
+          <tbody>{q.data.map((r) => (
+            <tr key={r.role}>
+              <td className="font-medium whitespace-nowrap text-fg">{r.role}</td>
+              <td><ul className="flex flex-wrap gap-1">{r.permissions.map((p) => (
+                <li key={p.name} title={p.capability + (p.isExtension ? ' (extension)' : '')} className="chip font-mono">{p.name}</li>
+              ))}</ul></td>
+            </tr>
+          ))}</tbody>
+        </table>
+      )}
+      <p className="px-4 py-2 text-[11px] text-subtle">Changing this mapping is a database migration, so the authorisation tests generated from Appendix B stay authoritative.</p>
+    </Panel>
+  )
+}
+
 export default function AdminPage() {
-  const { session, hasRole } = useAuth()
+  const { session, can } = useAuth()
   const qc = useQueryClient()
   const overview = useOverview()
-  const sim = useQuery({ queryKey: ['simulator'], queryFn: ({ signal }) => apiGet<{ paused: boolean; anchorUtc: string | null; lastReadingUtc: string | null }>('/api/admin/simulator', signal), refetchInterval: 7000 })
-  const audit = useQuery({ queryKey: ['audit'], queryFn: () => apiGet<AuditEntry[]>('/api/admin/audit?limit=50'), enabled: hasRole('Admin') })
+  const sim = useQuery({ queryKey: ['simulator'], queryFn: ({ signal }) => apiGet<{ paused: boolean; anchorUtc: string | null; lastReadingUtc: string | null }>('/api/admin/simulator', signal), refetchInterval: 7000, enabled: can('simulator.control') })
+  const audit = useQuery({ queryKey: ['audit'], queryFn: () => apiGet<AuditEntry[]>('/api/admin/audit?limit=50'), enabled: can('audit.view') })
   const toggle = useMutation({
     mutationFn: (paused: boolean) => apiSend('PUT', '/api/admin/simulator', { paused }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['simulator'] }); qc.invalidateQueries({ queryKey: ['overview'] }) },
@@ -98,7 +123,7 @@ export default function AdminPage() {
                   <p className="text-fg">Simulator <b className={sim.data.paused ? 'text-warn' : 'text-ok'}>{sim.data.paused ? 'Paused' : 'Running'}</b></p>
                   <p className="text-xs text-muted">Last reading {formatUtc(sim.data.lastReadingUtc)} · seed anchor {formatUtc(sim.data.anchorUtc)}</p>
                 </div>
-                {hasRole('Admin') && (
+                {can('simulator.control') && (
                   <button onClick={() => toggle.mutate(!sim.data?.paused)} disabled={toggle.isPending} className="btn btn-secondary btn-sm">
                     {sim.data.paused ? <Play className="size-3.5" aria-hidden="true" /> : <Pause className="size-3.5" aria-hidden="true" />}
                     {sim.data.paused ? 'Resume simulator' : 'Pause simulator'}
@@ -106,7 +131,7 @@ export default function AdminPage() {
                 )}
               </div>
             )}
-            {!hasRole('Admin') ? <EmptyState icon={false}>Sign in as Admin to pause the simulator, reset demo data, manage users and view the audit log.</EmptyState> : (
+            {!can('simulator.control') ? <EmptyState icon={false}>Only an Administrator controls the simulator and demo data.</EmptyState> : (
               <div className="rounded-lg border border-crit/30 p-3">
                 <p className="flex items-center gap-1.5 text-xs font-semibold text-crit"><TriangleAlert className="size-3.5" aria-hidden="true" />Danger zone</p>
                 <p className="mt-1 text-[11px] text-subtle">Deletes only rows with DataOrigin = Synthetic and the demo seed batch, in one transaction, then re-seeds. User-created rows are never touched.</p>
@@ -121,8 +146,9 @@ export default function AdminPage() {
           </div>
         </Panel>
       </div>
-      {session && hasRole('Admin') && <Users self={session.email} />}
-      {hasRole('Admin') && (
+      {session && can('users.manage') && <Users self={session.email} />}
+      {can('users.manage') && <RolesAndPermissions />}
+      {can('audit.view') && (
         <Panel title="Audit log · latest 50" icon={<ScrollText className="size-4" />} className="overflow-x-auto">
           {audit.isPending ? <Loading /> : audit.isError ? <ErrorState error={audit.error} /> : (
             <table className="data-table text-xs">

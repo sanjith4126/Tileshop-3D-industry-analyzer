@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using TileTwin.Api.Configuration;
+using TileTwin.Domain;
 using TileTwin.Infrastructure.Data;
 using TileTwin.Infrastructure.Seeding;
 
@@ -40,6 +41,17 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     }
 
     public TileTwinDbContext CreateDbContext(IServiceScope scope) => scope.ServiceProvider.GetRequiredService<TileTwinDbContext>();
+
+    readonly Dictionary<string, string> tokens = [];
+
+    /// <summary>A client signed in as the DEV ONLY user of a role (one sign-in per role per test run; tokens last 15 min).</summary>
+    public async Task<HttpClient> SignedInClientAsync(string role = Roles.Administrator)
+    {
+        var client = CreateClient();
+        if (!tokens.TryGetValue(role, out var token)) tokens[role] = token = await ApiTests.LoginAsync(client, role);
+        client.DefaultRequestHeaders.Authorization = new("Bearer", token);
+        return client;
+    }
 
     Task IAsyncLifetime.DisposeAsync() => Task.CompletedTask;
 }

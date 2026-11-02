@@ -95,15 +95,34 @@ python scripts/smoke.py      # 20 end-to-end checks covering Scenarios A–D
 
 ## Users and access
 
-- Read endpoints are open (demo viewer). Every write endpoint requires a signed-in user with a suitable role
-  (`Viewer`, `Inspector`, `MaintenanceEngineer`, `Admin`) — sign in with the **Sign in** button in the top bar.
-  A sign-in lasts up to 12 h and survives page reloads (an HttpOnly refresh cookie); **Sign out** ends it on the
-  server. Open the app at `http://localhost:5180` (or over HTTPS): the cookie is `Secure`, so a plain-HTTP LAN
-  address cannot keep a session across reloads.
+- Every screen and every API endpoint needs a signed-in user (only sign-in and `/api/health` are public); the
+  app opens on its sign-in screen. A sign-in lasts up to 12 h and survives page reloads (an HttpOnly refresh
+  cookie); **Sign out** ends it on the server. Open the app at `http://localhost:5180` (or over HTTPS): the cookie
+  is `Secure`, so a plain-HTTP LAN address cannot keep a session across reloads.
+- Four roles — **Administrator**, **Plant Manager**, **Maintenance Engineer**, **Inspector** — map to named
+  permissions exactly as in Appendix B of [`docs/MASTER_PROMPT.md`](docs/MASTER_PROMPT.md) (for example only
+  engineers, plant managers and administrators acknowledge alerts; inspectors do not see anomaly scores or
+  maintenance records). The mapping is seed data, shown read-only in **Administration**; changing it takes a
+  migration. Four extra permissions cover the kept Knowledge Centre and Tile Quality features: `knowledge.view`
+  (all roles), `knowledge.manage` (all but Inspector), `tiles.view` (all roles) and `tiles.inspect` (all but
+  Plant Manager). Data scope ("assigned machines") is not enforced yet: signed-in roles see the whole plant.
 - There is **no default admin password**. DEV ONLY users exist only when the environment is
-  `Development` **and** `DEV_SEED_USER_PASSWORD` is set: `dev.viewer@tiletwin.local`,
-  `dev.inspector@tiletwin.local`, `dev.maintenanceengineer@tiletwin.local`, `dev.admin@tiletwin.local`.
-  Admins create further users in **Administration**.
+  `Development` **and** `DEV_SEED_USER_PASSWORD` is set: `dev.administrator@tiletwin.local`,
+  `dev.plantmanager@tiletwin.local`, `dev.maintenanceengineer@tiletwin.local`, `dev.inspector@tiletwin.local`.
+  Administrators create further users in **Administration**.
+
+## Upgrading an existing database
+
+The API applies migrations at start-up. Migrations that rewrite existing rows are marked in
+[`CHANGELOG.md`](CHANGELOG.md) (for example `RenameRolesAndAddPermissions`, which renames the roles Viewer →
+PlantManager and Admin → Administrator and the matching DEV ONLY users). Back up first:
+
+```powershell
+docker exec tiletwin-postgres-1 pg_dump -U tiletwin -d tiletwin -Fc -f /tmp/tiletwin.dump
+docker cp tiletwin-postgres-1:/tmp/tiletwin.dump .\tiletwin-backup.dump
+```
+
+Restore with `pg_restore --clean -d tiletwin` inside the container; every migration also has a `Down` step.
 
 ## Demo data
 
@@ -115,7 +134,7 @@ Critical, MACHINE-PUMP-002 loses its flow sensor (Unknown), MACHINE-CONV-003 is 
 
 While the API runs, a simulator writes a reading per sensor every 5 s. Time it was not running (API
 stopped, PC asleep, simulator paused) stays a visible gap in the charts — nothing is back-filled. To start
-again from a complete 7-day history, use **Administration → Reset demo data** (Admin): it deletes only the
+again from a complete 7-day history, use **Administration → Reset demo data** (Administrator): it deletes only the
 synthetic demo rows in one transaction and re-seeds; user-created rows are kept.
 
 ## Optional components

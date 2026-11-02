@@ -5,7 +5,7 @@ import type { Overview } from './pages/OverviewData'
 import App from './App'
 import { StatusBadge } from './components/StatusBadge'
 import { getFocus } from './store/focus'
-import { mockApi, renderWithProviders } from './test-utils'
+import { mockApi, renderWithProviders, sessionAs } from './test-utils'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -24,13 +24,34 @@ const overview: Overview = {
   },
 }
 
+const admin = sessionAs('Administrator')
+
 describe('shell', () => {
-  it('shows the synthetic-data banner and all ten navigation entries', () => {
-    mockApi({ '/api/machines': [], '/api/overview': overview })
+  it('shows the synthetic-data banner and all ten navigation entries to an administrator', async () => {
+    mockApi({ '/api/machines': [], '/api/overview': overview, '/api/v1/auth/refresh': admin })
     renderWithProviders(<App />)
     expect(screen.getByRole('note')).toHaveTextContent('DEMONSTRATION FACILITY — SYNTHETIC DEMO DATA')
-    const nav = screen.getByRole('navigation', { name: 'Main' })
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
     expect(nav.querySelectorAll('a')).toHaveLength(10)
+  })
+
+  it('shows only the sign-in screen, with the banner, until someone signs in', async () => {
+    mockApi({ '/api/machines': [], '/api/overview': overview })
+    renderWithProviders(<App />)
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+    expect(screen.getByRole('note')).toHaveTextContent('SYNTHETIC DEMO DATA')
+    expect(screen.queryByRole('navigation', { name: 'Main' })).not.toBeInTheDocument()
+  })
+
+  it('lists only the pages a role may open and refuses the others', async () => {
+    mockApi({ '/api/machines': [], '/api/overview': overview, '/api/v1/auth/refresh': sessionAs('Inspector') })
+    renderWithProviders(<App />, '/predictive')
+    const nav = await screen.findByRole('navigation', { name: 'Main' })
+    const labels = [...nav.querySelectorAll('a')].map((a) => a.textContent)
+    expect(labels).not.toContain('Predictive Maintenance')
+    expect(labels).not.toContain('Administration')
+    expect(labels).toContain('Remote Site Inspection')
+    expect(screen.getByText('Predictive Maintenance is not available for your role.')).toBeInTheDocument()
   })
 
   it('status badge shows icon and text, not colour alone', () => {
@@ -45,6 +66,7 @@ describe('overview', () => {
     mockApi({
       '/api/machines': [machine('MACHINE-HP-001', 'Normal'), machine('MACHINE-HP-002', 'Critical', ['Vibration 7.85 beyond critical limit']), machine('MACHINE-PUMP-002', 'Unknown')],
       '/api/overview': overview,
+      '/api/v1/auth/refresh': admin,
     })
     renderWithProviders(<App />)
 
@@ -57,15 +79,18 @@ describe('overview', () => {
   })
 
   it('"Show in 3D" requests focus on the machine', async () => {
-    mockApi({ '/api/machines': [machine('MACHINE-HP-002', 'Critical')], '/api/overview': overview })
+    mockApi({ '/api/machines': [machine('MACHINE-HP-002', 'Critical')], '/api/overview': overview, '/api/v1/auth/refresh': admin })
     renderWithProviders(<App />)
     const before = getFocus().seq
     fireEvent.click(await screen.findByRole('button', { name: 'Show in 3D' }))
     expect(getFocus()).toEqual({ entityId: 'MACHINE-HP-002', seq: before + 1 })
   })
 
-  it('shows an error state when the API is unreachable', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+  it('shows an error state when the API becomes unreachable', async () => {
+    // Signed in (the refresh worked), then every data request fails at the network level.
+    vi.stubGlobal('fetch', vi.fn(async (path: string) => path === '/api/v1/auth/refresh'
+      ? new Response(JSON.stringify(admin), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      : Promise.reject(new TypeError('Failed to fetch'))))
     renderWithProviders(<App />)
     expect((await screen.findAllByText('Backend API unreachable')).length).toBeGreaterThan(0)
   })

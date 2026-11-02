@@ -2,6 +2,7 @@ import { ArrowRight, BrainCircuit, Box, ClipboardCheck, Gauge, Siren, Sparkles }
 import type { CSSProperties } from 'react'
 import { Link } from 'react-router'
 import { useMachines } from '../api/hooks'
+import { useAuth } from '../auth/auth'
 import { DemoBadge, ErrorState, Loading, Page, Panel } from '../components/States'
 import { ago } from '../lib/status'
 import { ConfigStatus, useOverview } from './OverviewData'
@@ -22,6 +23,7 @@ function summary(machines: { status: string }[]) {
 }
 
 export default function OverviewPage() {
+  const { can } = useAuth()
   const machines = useMachines()
   const overview = useOverview()
   const o = overview.data
@@ -65,8 +67,8 @@ export default function OverviewPage() {
 
             <div className="mt-auto flex flex-wrap gap-2 pt-7">
               <Link to="/twin" className="btn btn-primary btn-lg"><Box className="size-4" aria-hidden="true" />Open 3D twin</Link>
-              <Link to="/predictive" className="btn btn-secondary btn-lg"><Gauge className="size-4" aria-hidden="true" />Prioritise maintenance</Link>
-              <Link to="/assistant" className="btn btn-ghost btn-lg"><Sparkles className="size-4" aria-hidden="true" />Ask the assistant<ArrowRight className="size-3.5" aria-hidden="true" /></Link>
+              {can('anomalies.view') && <Link to="/predictive" className="btn btn-secondary btn-lg"><Gauge className="size-4" aria-hidden="true" />Prioritise maintenance</Link>}
+              {can('assistant.use') && <Link to="/assistant" className="btn btn-ghost btn-lg"><Sparkles className="size-4" aria-hidden="true" />Ask the assistant<ArrowRight className="size-3.5" aria-hidden="true" /></Link>}
             </div>
           </div>
 
@@ -86,9 +88,13 @@ export default function OverviewPage() {
           value={o ? o.openAlerts.total : '–'} sub={o ? `${o.openAlerts.critical} critical · ${o.openAlerts.total - o.openAlerts.critical} warning` : ' '} />
         <Kpi i={2} to="/inspection?status=Open&priority=High" Icon={ClipboardCheck} label="High-priority observations" tone="serious"
           value={o ? o.openHighPriorityObservations : '–'} sub="Open · remote site inspection" />
-        <Kpi i={3} to={o?.latestAnomaly ? `/predictive?machine=${o.latestAnomaly.machineId}` : '/predictive'} Icon={BrainCircuit} label="Latest ML anomaly" tone="accent"
-          value={o?.latestAnomaly ? <span className="font-mono text-xl">{o.latestAnomaly.machineId}</span> : o ? 'None' : '–'}
-          sub={o?.latestAnomaly ? `flagged ${ago(o.latestAnomaly.timestampUtc)} · not a confirmed fault` : 'Statistical — not a confirmed fault'} />
+        {can('anomalies.view') ? (
+          <Kpi i={3} to={o?.latestAnomaly ? `/predictive?machine=${o.latestAnomaly.machineId}` : '/predictive'} Icon={BrainCircuit} label="Latest ML anomaly" tone="accent"
+            value={o?.latestAnomaly ? <span className="font-mono text-xl">{o.latestAnomaly.machineId}</span> : o ? 'None' : '–'}
+            sub={o?.latestAnomaly ? `flagged ${ago(o.latestAnomaly.timestampUtc)} · not a confirmed fault` : 'Statistical — not a confirmed fault'} />
+        ) : (
+          <Kpi i={3} to="/monitoring" Icon={BrainCircuit} label="Latest ML anomaly" tone="accent" value="—" sub="Anomaly scores are not available for your role" />
+        )}
         <Kpi i={4} to="/reports" Icon={Gauge} label="Reject rate · 7 days" tone="ok"
           value={o?.production?.ratePercent != null ? <>{o.production.ratePercent.toFixed(2)}<span className="text-lg text-subtle">%</span></> : o?.production ? 'No data' : '–'}
           sub={!o?.production ? ' ' : o.production.ratePercent == null ? 'No production records in the last 7 days'

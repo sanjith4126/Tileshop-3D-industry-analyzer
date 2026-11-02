@@ -4,14 +4,16 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using TileTwin.Api.Configuration;
 using TileTwin.Api.Dtos;
+using TileTwin.Api.Security;
 using TileTwin.Api.Services;
 using TileTwin.Domain;
 using TileTwin.Infrastructure.Data;
 
 namespace TileTwin.Api.Controllers;
 
-[ApiController, Route("api/health")]
-public class HealthController(TileTwinDbContext db, AppConfig config, IWebHostEnvironment env, MlStatus ml) : ControllerBase
+/// <summary>Anonymous liveness for probes and scripts: no plant data, configuration or internal addresses.</summary>
+[ApiController, Route("api/health"), AllowAnonymous]
+public class HealthController(TileTwinDbContext db) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> Get(CancellationToken ct)
@@ -19,21 +21,17 @@ public class HealthController(TileTwinDbContext db, AppConfig config, IWebHostEn
         bool dbOk;
         try { dbOk = await db.Database.CanConnectAsync(ct); }
         catch { dbOk = false; }
-        var demo = dbOk ? await db.DemoState.FindAsync([1], ct) : null;
         return Ok(new
         {
             status = dbOk ? "ok" : "degraded",
             service = "TileTwin.Api",
             database = dbOk ? "ok" : "unavailable",
-            demoData = demo is null ? null : new { demo.SeedBatchId, demo.AnchorUtc, demo.SeededUtc },
-            features = config.Features(env.IsDevelopment()),
-            ml = new { ml.Available, ml.Message, ml.LastCheckedUtc },
             timestampUtc = DateTime.UtcNow,
         });
     }
 }
 
-[ApiController, Route("api/zones")]
+[ApiController, Route("api/zones"), RequirePermission(Permissions.PlantView)]
 public class ZonesController(TileTwinDbContext db, MachineService machines) : ControllerBase
 {
     [HttpGet]
@@ -60,21 +58,22 @@ public class ZonesController(TileTwinDbContext db, MachineService machines) : Co
 }
 
 [ApiController, Route("api/machines")]
-public class MachinesController(MachineService machines, ReadingsService readings) : ControllerBase
+public class MachinesController(MachineService machines, ReadingsService readings, CurrentUser user) : ControllerBase
 {
-    [HttpGet]
+    [HttpGet, RequirePermission(Permissions.PlantView)]
     public async Task<List<MachineSummaryDto>> List([FromQuery] string? zoneId, [FromQuery] MachineStatus? status, CancellationToken ct)
     {
         var list = await machines.ListAsync(zoneId, ct);
         return status is null ? list : list.Where(m => m.Status == status).ToList();
     }
 
-    [HttpGet("{id}")]
+    /// <summary>Machine snapshot; recent maintenance only for roles that may view maintenance records.</summary>
+    [HttpGet("{id}"), RequirePermission(Permissions.MachinesView)]
     public async Task<IActionResult> Get(string id, CancellationToken ct) =>
-        await machines.GetAsync(id, ct) is { } m ? Ok(m) : NotFound();
+        await machines.GetAsync(id, await user.CanAsync(Permissions.MaintenanceView), ct) is { } m ? Ok(m) : NotFound();
 
     /// <summary>Downsampled time series per sensor. range = 1h | 24h | 7d.</summary>
-    [HttpGet("{id}/readings")]
+    [HttpGet("{id}/readings"), RequirePermission(Permissions.MachinesView)]
     public async Task<IActionResult> Readings(string id, [FromQuery] string range = "24h", CancellationToken ct = default)
     {
         if (!ReadingsService.Ranges.ContainsKey(range))
@@ -82,7 +81,7 @@ public class MachinesController(MachineService machines, ReadingsService reading
         return await readings.GetAsync(id, range, ct) is { } r ? Ok(r) : NotFound();
     }
 
-    [HttpPut("{id}/state"), Authorize(Roles = $"{Roles.MaintenanceEngineer},{Roles.Admin}")]
+    [HttpPut("{id}/state"), RequirePermission(Permissions.MaintenanceManage)]
     public async Task<IActionResult> UpdateState(string id, UpdateMachineStateRequest req, CancellationToken ct) =>
         await machines.UpdateStateAsync(id, req, User.Identity?.Name, ct) ? NoContent() : NotFound();
 }
@@ -92,13 +91,13 @@ public class MachinesController(MachineService machines, ReadingsService reading
 /// scoped to /api/v1/auth; the access token is returned in the body and kept in memory by the SPA.
 /// </summary>
 [ApiController, Route("api/v1/auth")]
-public class AuthController(AuthService auth, LoginThrottle throttle) : ControllerBase
+public class AuthController(AuthService auth, LoginThrottle throttle, CurrentUser currentUser) : ControllerBase
 {
     public const string RefreshCookie = "tiletwin_refresh";
     const string CookiePath = "/api/v1/auth";
     static readonly long DeprecatedSince = new DateTimeOffset(2026, 10, 31, 0, 0, 0, TimeSpan.Zero).ToUnixTimeSeconds();
 
-    [HttpPost("login"), HttpPost("/api/auth/login"), EnableRateLimiting("login")]
+    [HttpPost("login"), HttpPost("/api/auth/login"), AllowAnonymous, EnableRateLimiting("login")]
     public async Task<IActionResult> Login(LoginRequest req, CancellationToken ct)
     {
         if (Request.Path.StartsWithSegments("/api/auth")) Deprecated("/api/v1/auth/login");
@@ -108,7 +107,7 @@ public class AuthController(AuthService auth, LoginThrottle throttle) : Controll
     }
 
     /// <summary>204 when there is no refresh cookie at all (nobody signed in: not an error); 401 when the cookie is refused.</summary>
-    [HttpPost("refresh"), EnableRateLimiting("refresh")]
+    [HttpPost("refresh"), AllowAnonymous, EnableRateLimiting("refresh")]
     public async Task<IActionResult> Refresh(CancellationToken ct)
     {
         if (Request.Cookies[RefreshCookie] is not { Length: > 0 } raw) return NoContent();
@@ -117,7 +116,7 @@ public class AuthController(AuthService auth, LoginThrottle throttle) : Controll
         return Unauthorized(new { error = "Session ended — sign in again" });
     }
 
-    [HttpPost("logout")]
+    [HttpPost("logout"), AllowAnonymous] // identified by the refresh cookie, so it works after the access token expired
     public async Task<IActionResult> Logout(CancellationToken ct)
     {
         if (Request.Cookies[RefreshCookie] is { Length: > 0 } raw) await auth.LogoutAsync(raw, ct);
@@ -125,11 +124,15 @@ public class AuthController(AuthService auth, LoginThrottle throttle) : Controll
         return NoContent();
     }
 
-    [HttpGet("me"), HttpGet("/api/auth/me"), Authorize]
-    public IActionResult Me()
+    [HttpGet("me"), HttpGet("/api/auth/me"), Authorize] // any signed-in user
+    public async Task<IActionResult> Me()
     {
         if (Request.Path.StartsWithSegments("/api/auth")) Deprecated("/api/v1/auth/me");
-        return Ok(new { name = User.Identity?.Name, roles = User.FindAll("role").Select(c => c.Value).ToList() });
+        return Ok(new
+        {
+            name = User.Identity?.Name, roles = User.FindAll("role").Select(c => c.Value).ToList(),
+            permissions = (await currentUser.PermissionsAsync()).Order().ToList(),
+        });
     }
 
     OkObjectResult Session(AuthSession s)

@@ -6,19 +6,19 @@ import { expect, test, type Page } from '@playwright/test'
  * DEV_SEED_USER_PASSWORD must be the password the API seeded the DEV ONLY users with.
  */
 const password = process.env.DEV_SEED_USER_PASSWORD ?? ''
-const adminEmail = process.env.E2E_ADMIN_EMAIL ?? 'dev.admin@tiletwin.local'
+const adminEmail = process.env.E2E_ADMIN_EMAIL ?? 'dev.administrator@tiletwin.local'
 
 // Known, documented library noise (BASELINE K3): drei <Html> unmounts its React roots during route changes.
 const ignored = [/synchronously unmount a root while React was already rendering/]
 
+/** Every screen needs a signed-in user, so the app opens on its sign-in screen. */
 async function signIn(page: Page) {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Sign in' }).first().click()
   const form = page.getByRole('form', { name: 'Sign in' })
   await form.getByLabel('Email').fill(adminEmail)
   await form.getByLabel('Password').fill(password)
   await form.getByRole('button', { name: 'Sign in' }).click()
-  await expect(form).toBeHidden()
+  await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible()
 }
 
 const screens: { path: string; heading: RegExp }[] = [
@@ -63,12 +63,13 @@ test.describe('smoke: existing screens', () => {
 
     await page.getByText(adminEmail).first().click()
     await page.getByRole('menuitem', { name: /Sign out/ }).click()
-    await expect(page.getByRole('button', { name: 'Sign in' }).first()).toBeVisible()  // server revoked the session
+    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible()          // server revoked the session
     await page.reload()
-    await expect(page.getByRole('button', { name: 'Sign in' }).first()).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible()
   })
 
   test('unknown address shows the not-found page', async ({ page }) => {
+    await signIn(page)
     await page.goto('/no-such-page')
     await expect(page.getByRole('heading', { name: /not found/i })).toBeVisible()
     await expect(page.getByRole('link', { name: /Back to Overview/ })).toBeVisible()

@@ -41,9 +41,10 @@ public class AssistantWorkflowTests(ApiFactory factory)
     public async Task Without_a_key_the_assistant_reports_not_configured_and_gives_no_answer()
     {
         var client = factory.CreateClient();
-        Assert.Contains("AI NOT CONFIGURED", await client.GetStringAsync("/api/assistant/status"));
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/assistant/status")).StatusCode);
 
-        client.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(client, Roles.Viewer));
+        client.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(client, Roles.PlantManager));
+        Assert.Contains("AI NOT CONFIGURED", await client.GetStringAsync("/api/assistant/status"));
         var res = await client.PostAsJsonAsync("/api/assistant/chat", new ChatRequest([new("user", "Which machines have active alerts?")]), Json);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, res.StatusCode);
         Assert.Contains("AI NOT CONFIGURED", await res.Content.ReadAsStringAsync());
@@ -59,7 +60,7 @@ public class AssistantWorkflowTests(ApiFactory factory)
             ("search_machines", """{"query":"'; DROP TABLE x;--","status":null,"zoneId":null}"""));
         using var app = factory.WithWebHostBuilder(b => b.ConfigureTestServices(s => s.AddSingleton<ILlmProvider>(llm)));
         var client = app.CreateClient();
-        client.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(client, Roles.Viewer));
+        client.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(client, Roles.PlantManager));
 
         var res = await client.PostAsJsonAsync("/api/assistant/chat", new ChatRequest([new("user", "Which machines have active alerts?")]), Json);
         var body = await res.Content.ReadFromJsonAsync<ChatResponse>(Json);
@@ -74,7 +75,7 @@ public class AssistantWorkflowTests(ApiFactory factory)
         Assert.Equal("[]", JsonDocument.Parse(llm.Results[3].Result).RootElement.GetProperty("result").GetRawText());
 
         using var scope = factory.Services.CreateScope();
-        var audited = await factory.CreateDbContext(scope).AuditLog.CountAsync(a => a.Action == "assistant.tool" && a.UserName == "dev.viewer@tiletwin.local");
+        var audited = await factory.CreateDbContext(scope).AuditLog.CountAsync(a => a.Action == "assistant.tool" && a.UserName == "dev.plantmanager@tiletwin.local");
         Assert.True(audited >= 4);
     }
 
@@ -89,7 +90,7 @@ public class AssistantWorkflowTests(ApiFactory factory)
         var llm = new ScriptedLlm(("create_report_draft", """{"type":"FactoryHealth","days":7}"""));
         using var app = factory.WithWebHostBuilder(b => b.ConfigureTestServices(s => s.AddSingleton<ILlmProvider>(llm)));
         var client = app.CreateClient();
-        client.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(client, Roles.Viewer));
+        client.DefaultRequestHeaders.Authorization = new("Bearer", await LoginAsync(client, Roles.PlantManager));
         using var scope = factory.Services.CreateScope();
         var db = factory.CreateDbContext(scope);
         var reportsBefore = await db.Reports.CountAsync();

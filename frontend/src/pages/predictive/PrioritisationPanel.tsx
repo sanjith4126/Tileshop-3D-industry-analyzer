@@ -1,9 +1,10 @@
 import { useMutation } from '@tanstack/react-query'
-import { Box, Download, FileText, ListOrdered, Play } from 'lucide-react'
+import { Box, FileText, ListOrdered, Play } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { apiSend } from '../../api/client'
 import type { MachineStatus } from '../../api/types'
 import { useAuth } from '../../auth/auth'
+import { DownloadButton } from '../../components/AuthMedia'
 import { ErrorState, Panel } from '../../components/States'
 import { StatusBadge } from '../../components/StatusBadge'
 import { focusEntity } from '../../store/focus'
@@ -72,7 +73,7 @@ export function PrioritisationPanel() {
           </div>
           <p className="text-xs text-subtle">{out.ranking.filter((r) => r.score === 0).length} machine(s) score 0 (routine). Excluded: {out.excluded.join(', ') || 'none'}.</p>
           <div className="flex flex-wrap items-center gap-3">
-            {out.reportId && <a href={`/api/reports/${out.reportId}/pdf`} download className="btn btn-primary btn-sm"><Download className="size-3.5" aria-hidden="true" />Download PDF report</a>}
+            {out.reportId && <DownloadButton path={`/api/reports/${out.reportId}/pdf`} fileName="maintenance-prioritisation.pdf" className="btn btn-primary btn-sm">Download PDF report</DownloadButton>}
             <p className="text-xs font-medium text-warn">{out.reviewLabel}</p>
           </div>
         </div>

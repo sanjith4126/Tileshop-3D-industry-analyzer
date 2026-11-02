@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TileTwin.Api.Configuration;
 using TileTwin.Api.Services;
+using TileTwin.Api.Security;
 using TileTwin.Domain;
 using TileTwin.Domain.Production;
 using TileTwin.Infrastructure.Data;
@@ -12,32 +13,45 @@ using TileTwin.Infrastructure.Simulation;
 
 namespace TileTwin.Api.Controllers;
 
-[ApiController, Route("api/admin"), Authorize(Roles = Roles.Admin)]
+[ApiController, Route("api/admin")]
 public class AdminController(UserAdminService userAdmin, TileTwinDbContext db, DemoSeeder seeder, AuditLogger audit, TimeProvider clock) : ControllerBase
 {
-    [HttpGet("users")]
+    [HttpGet("users"), RequirePermission(Permissions.UsersManage)]
     public Task<List<UserDto>> Users() => userAdmin.ListAsync();
 
-    [HttpPost("users")]
+    [HttpPost("users"), RequirePermission(Permissions.UsersManage)]
     public async Task<IActionResult> CreateUser(CreateUserRequest req)
     {
         var (user, error) = await userAdmin.CreateAsync(req, User.Identity!.Name!);
         return user is not null ? Ok(user) : Bad("user", error!);
     }
 
-    [HttpPut("users/{id}")]
+    [HttpPut("users/{id}"), RequirePermission(Permissions.UsersManage)]
     public async Task<IActionResult> UpdateUser(string id, UpdateUserRequest req)
     {
         var (user, error) = await userAdmin.UpdateAsync(id, req, User.Identity!.Name!);
         return user is not null ? Ok(user) : error is null ? NotFound() : Bad("user", error);
     }
 
-    [HttpGet("audit")]
+    /// <summary>Roles and their permissions, read-only: the mapping is seed data and changes only by migration.</summary>
+    [HttpGet("roles"), RequirePermission(Permissions.UsersManage)]
+    public async Task<IActionResult> RolesAndPermissions([FromServices] PermissionCatalog catalog, CancellationToken ct)
+    {
+        var map = await catalog.MapAsync();
+        var defs = await db.Permissions.AsNoTracking().ToDictionaryAsync(p => p.Name, ct);
+        return Ok(Roles.All.Select(r => new
+        {
+            role = r,
+            permissions = (map.GetValueOrDefault(r) ?? []).Select(n => new { name = n, defs[n].Capability, defs[n].IsExtension }),
+        }));
+    }
+
+    [HttpGet("audit"), RequirePermission(Permissions.AuditView)]
     public async Task<IActionResult> Audit([FromQuery] int limit = 100, CancellationToken ct = default) =>
         Ok(await db.AuditLog.AsNoTracking().OrderByDescending(a => a.TimestampUtc).Take(Math.Clamp(limit, 1, 500)).ToListAsync(ct));
 
     /// <summary>Deletes only Synthetic rows of the demo batch (in one transaction) and re-seeds. User-created rows are kept.</summary>
-    [HttpPost("reset-demo"), Microsoft.AspNetCore.Http.Timeouts.RequestTimeout("long")]
+    [HttpPost("reset-demo"), RequirePermission(Permissions.SimulatorControl), Microsoft.AspNetCore.Http.Timeouts.RequestTimeout("long")]
     public async Task<IActionResult> ResetDemo(CancellationToken ct)
     {
         await SimulationEngine.DemoLock.WaitAsync(ct);
@@ -58,9 +72,9 @@ public class AdminController(UserAdminService userAdmin, TileTwinDbContext db, D
 }
 
 /// <summary>Aggregated numbers for the Overview page and configuration status of every optional component.</summary>
-[ApiController, Route("api/overview")]
+[ApiController, Route("api/overview"), RequirePermission(Permissions.PlantView)]
 public class OverviewController(MachineService machines, TileTwinDbContext db, AppConfig config, IWebHostEnvironment env,
-    MlStatus ml, TileInspectionService tiles, ILlmProvider llm, IEmbeddingProvider embeddings, TimeProvider clock) : ControllerBase
+    MlStatus ml, TileInspectionService tiles, ILlmProvider llm, IEmbeddingProvider embeddings, TimeProvider clock, CurrentUser user) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> Get(CancellationToken ct)
@@ -71,7 +85,9 @@ public class OverviewController(MachineService machines, TileTwinDbContext db, A
         var highObs = await db.InspectionObservations.AsNoTracking().CountAsync(o =>
             (o.Status == ObservationStatus.Open || o.Status == ObservationStatus.InProgress)
             && (o.Priority == ObservationPriority.High || o.Priority == ObservationPriority.Critical), ct);
-        var latest = await db.AnomalyScores.AsNoTracking().Where(a => a.IsAnomaly).OrderByDescending(a => a.TimestampUtc)
+        // Anomaly scores only for roles that may see them (Appendix B: not inspectors).
+        var latest = !await user.CanAsync(Permissions.AnomaliesView) ? null : await db.AnomalyScores.AsNoTracking().Where(a => a.IsAnomaly)
+            .OrderByDescending(a => a.TimestampUtc)
             .Select(a => new { a.MachineId, a.Score, a.Threshold, a.TimestampUtc, a.ModelVersion }).FirstOrDefaultAsync(ct);
         var demo = await db.DemoState.AsNoTracking().SingleOrDefaultAsync(ct);
         var tile = await tiles.StatusAsync(ct);

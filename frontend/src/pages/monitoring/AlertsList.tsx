@@ -10,7 +10,7 @@ import { StatusBadge } from '../../components/StatusBadge'
 import { formatUtc } from '../../lib/status'
 
 function AlertRow({ alert }: { alert: Alert }) {
-  const { hasRole } = useAuth()
+  const { can } = useAuth()
   const qc = useQueryClient()
   const [comment, setComment] = useState('')
   const act = useMutation({
@@ -21,8 +21,8 @@ function AlertRow({ alert }: { alert: Alert }) {
       qc.invalidateQueries({ queryKey: ['machines'] })
     },
   })
-  const canAck = alert.status === 'Open' && hasRole('Inspector', 'MaintenanceEngineer', 'Admin')
-  const canResolve = alert.status !== 'Resolved' && hasRole('MaintenanceEngineer', 'Admin')
+  const canAck = alert.status === 'Open' && can('alerts.acknowledge')
+  const canResolve = alert.status !== 'Resolved' && can('alerts.acknowledge')
 
   return (
     <li className="border-b border-line/70 px-4 py-3 last:border-0">
@@ -57,7 +57,7 @@ function AlertRow({ alert }: { alert: Alert }) {
 }
 
 export function AlertsList({ machineId }: { machineId?: string }) {
-  const { session } = useAuth()
+  const { can } = useAuth()
   const q = useAlerts(machineId)
   if (q.isPending) return <Loading label="Loading alerts…" />
   if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />
@@ -66,7 +66,7 @@ export function AlertsList({ machineId }: { machineId?: string }) {
       {q.data.length === 0 ? <EmptyState>No open or acknowledged alerts.</EmptyState> : (
         <ul>{q.data.map((a) => <AlertRow key={a.id} alert={a} />)}</ul>
       )}
-      {!session && q.data.length > 0 && <p className="border-t border-line bg-sunken/60 px-4 py-2 text-xs text-subtle">Sign in as Inspector, Maintenance Engineer or Admin to acknowledge.</p>}
+      {!can('alerts.acknowledge') && q.data.length > 0 && <p className="border-t border-line bg-sunken/60 px-4 py-2 text-xs text-subtle">Your role can view alerts; acknowledging and resolving them is for engineers, plant managers and administrators.</p>}
     </>
   )
 }
